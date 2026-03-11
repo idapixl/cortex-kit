@@ -1,0 +1,16 @@
+# Project Instructions
+
+## Cognitive Tools
+
+These cortex tools are always available via the `mcp__cortex__*` namespace.
+
+| When this happens | Call this |
+|---|---|
+| Starting any session | `query("what was I working on")` |
+| Exploring any topic | `query("the topic")` — pull related memories first |
+| Something interesting happened | `observe("what you noticed")` — capture it now |
+| A belief shifts | `believe("the new position")` |
+| Validating a conclusion | `validate("the claim")` |
+| Mapping knowledge about X | `neighbors("concept name")` |
+
+**The rule:** if you're about to write something, you should have already called `query()` or `observe()` in the same session.

@@ -1,0 +1,15 @@
+{
+  "name": "cortex-kit",
+  "version": "0.1.0",
+  "description": "Portable agent infrastructure for cortex-powered AI agents",
+  "requires": {
+    "cortex_api": ">=0.3.0",
+    "claude_code": ">=1.0.0"
+  },
+  "contents": {
+    "hooks": ["cognitive-grounding", "observe-first", "cortex-telemetry", "session-lifecycle"],
+    "hookify_rules": ["cognitive-grounding", "observe-first", "note-about-doing"],
+    "skills": ["cortex-query", "cortex-review"],
+    "agents": ["cortex-researcher"]
+  }
+}
