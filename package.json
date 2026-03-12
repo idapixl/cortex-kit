@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "cortex-engine": "dist/bin/serve.js"
+    "cortex-engine": "dist/bin/serve.js",
+    "cortex-kit": "dist/bin/cli.js"
   },
   "scripts": {
     "build": "tsc",
