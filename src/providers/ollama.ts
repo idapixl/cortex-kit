@@ -5,7 +5,7 @@
  * Uses Node.js built-in fetch — no extra HTTP dependencies.
  *
  * Defaults:
- *   embed model  — nomic-embed-text (768 dimensions)
+ *   embed model  — qwen3-embedding:0.6b (1024 dimensions, MRL to 32)
  *   LLM model    — qwen2.5:14b
  */
 
@@ -65,9 +65,9 @@ export class OllamaEmbedProvider implements EmbedProvider {
     baseUrl?: string;
     dimensions?: number;
   }) {
-    this.model = options?.model ?? 'nomic-embed-text';
+    this.model = options?.model ?? 'qwen3-embedding:0.6b';
     this.baseUrl = options?.baseUrl ?? 'http://localhost:11434';
-    this.dimensions = options?.dimensions ?? 768;
+    this.dimensions = options?.dimensions ?? 1024;
   }
 
   async embed(text: string): Promise<number[]> {

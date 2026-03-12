@@ -94,7 +94,7 @@ export interface CortexConfig {
 
   /** Embed provider-specific options. */
   embed_options?: {
-    /** Ollama: model name (default: nomic-embed-text) */
+    /** Ollama: model name (default: qwen3-embedding:0.6b) */
     ollama_model?: string;
     /** Ollama: base URL (default: http://localhost:11434) */
     ollama_url?: string;
