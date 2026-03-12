@@ -74,5 +74,8 @@ export {
   MAX_ACTIVATION_DEPTH,
 } from './engines/memory.js';
 
+// Stores
+export { SqliteCortexStore } from './stores/sqlite.js';
+
 // Providers
 export { OllamaEmbedProvider, OllamaLLMProvider } from './providers/ollama.js';
