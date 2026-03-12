@@ -12,6 +12,8 @@
 
 import { loadConfig } from './config-loader.js';
 import { runInit } from './init.js';
+import { runDigest } from './digest-cmd.js';
+import { runConfig } from './config-cmd.js';
 import { startServer } from '../mcp/server.js';
 
 // ─── Help ──────────────────────────────────────────────────────────────────
@@ -25,7 +27,8 @@ Usage:
 Commands:
   init <name>   Scaffold a new agent workspace
   serve          Start the MCP server (stdio)
-  config         View resolved configuration
+  config         View or edit configuration
+  digest         Process documents through cortex
   help           Show this help message
 
 Init options:
@@ -42,15 +45,10 @@ Examples:
   cortex-kit init --here --obsidian
   cortex-kit serve
   cortex-kit config
+  cortex-kit config --store sqlite --embed ollama
+  cortex-kit digest path/to/file.md
+  cortex-kit digest --pending
 `);
-}
-
-// ─── Config command ────────────────────────────────────────────────────────
-
-function runConfig(): void {
-  const config = loadConfig();
-  // Output resolved config to stdout as JSON
-  console.log(JSON.stringify(config, null, 2));
 }
 
 // ─── Dispatch ──────────────────────────────────────────────────────────────
@@ -73,7 +71,17 @@ switch (command) {
     break;
 
   case 'config':
-    runConfig();
+    runConfig(rest).catch(err => {
+      console.error('[cortex-kit] Config error:', err);
+      process.exit(1);
+    });
+    break;
+
+  case 'digest':
+    runDigest(rest).catch(err => {
+      console.error('[cortex-kit] Digest error:', err);
+      process.exit(1);
+    });
     break;
 
   case 'help':
