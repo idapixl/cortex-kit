@@ -77,6 +77,11 @@ export {
 // Stores
 export { SqliteCortexStore } from './stores/sqlite.js';
 
+
+// Namespace
+export { ScopedStore } from './namespace/scoped-store.js';
+export { NamespaceManager } from './namespace/manager.js';
+
 // Providers
 export { OllamaEmbedProvider, OllamaLLMProvider } from './providers/ollama.js';
 
@@ -85,3 +90,9 @@ export { TriggerRegistry } from './triggers/registry.js';
 export type { ResolvedTrigger } from './triggers/registry.js';
 export { executeIngestionPipeline } from './triggers/pipeline.js';
 export type { ToolHandler, PipelineResult, PipelineStepResult } from './triggers/pipeline.js';
+
+// Bridges
+export { BridgeRegistry } from './bridges/registry.js';
+export type { ResolvedBridgeRule } from './bridges/registry.js';
+export { evaluateCondition, interpolateTemplate, checkBridges } from './bridges/bridge.js';
+export type { BridgeContext, BridgeResult } from './bridges/bridge.js';
