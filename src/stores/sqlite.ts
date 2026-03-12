@@ -28,6 +28,12 @@ import type {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error(
+      `Embedding dimension mismatch: query has ${a.length} dims but stored has ${b.length} dims. ` +
+      `Check that your embed provider matches the dimensions used when memories were stored.`
+    );
+  }
   let dot = 0, normA = 0, normB = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
@@ -439,10 +445,28 @@ export class SqliteCortexStore implements CortexStore {
 
   async getEdgesForMemories(memoryIds: string[]): Promise<Edge[]> {
     if (memoryIds.length === 0) return [];
-    const ph = memoryIds.map(() => '?').join(', ');
-    return (this.db.prepare(
-      `SELECT * FROM ${this.t('edges')} WHERE source_id IN (${ph}) OR target_id IN (${ph})`
-    ).all(...memoryIds, ...memoryIds) as EdgeRow[]).map(rowToEdge);
+
+    // SQLite has a default variable limit of 999. Each ID appears twice
+    // (source_id IN + target_id IN), so chunk at 400 to stay safe.
+    const CHUNK_SIZE = 400;
+    const allEdges: Edge[] = [];
+    const seen = new Set<string>();
+
+    for (let i = 0; i < memoryIds.length; i += CHUNK_SIZE) {
+      const chunk = memoryIds.slice(i, i + CHUNK_SIZE);
+      const ph = chunk.map(() => '?').join(', ');
+      const rows = this.db.prepare(
+        `SELECT * FROM ${this.t('edges')} WHERE source_id IN (${ph}) OR target_id IN (${ph})`
+      ).all(...chunk, ...chunk) as EdgeRow[];
+      for (const row of rows) {
+        if (!seen.has(row.id)) {
+          seen.add(row.id);
+          allEdges.push(rowToEdge(row));
+        }
+      }
+    }
+
+    return allEdges;
   }
 
   // ─── Ops ───────────────────────────────────────────────────────────────────

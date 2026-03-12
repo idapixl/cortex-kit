@@ -38,14 +38,20 @@ export const MAX_ACTIVATION_DEPTH = 2;
  * Determine how a new observation should be ingested based on similarity
  * to existing memories.
  *
- * - merge (>0.85): too similar to existing memory (duplicate risk)
- * - link (0.50-0.85): moderately similar — store and link as related
- * - novel (<0.50): nothing close — candidate for a new memory concept
+ * - merge (>mergeThreshold): too similar to existing memory (duplicate risk)
+ * - link (>linkThreshold): moderately similar — store and link as related
+ * - novel: nothing close — candidate for a new memory concept
+ *
+ * Thresholds can be overridden per namespace via config.
  */
 export async function predictionErrorGate(
   store: CortexStore,
-  embedding: number[]
+  embedding: number[],
+  thresholds?: { merge?: number; link?: number }
 ): Promise<GateResult> {
+  const mergeThreshold = thresholds?.merge ?? SIMILARITY_MERGE;
+  const linkThreshold = thresholds?.link ?? SIMILARITY_LINK;
+
   const results = await store.findNearest(embedding, 5);
 
   if (results.length === 0) {
@@ -63,9 +69,9 @@ export async function predictionErrorGate(
   }
 
   let decision: IngestDecision;
-  if (maxSimilarity > SIMILARITY_MERGE) {
+  if (maxSimilarity > mergeThreshold) {
     decision = 'merge';
-  } else if (maxSimilarity > SIMILARITY_LINK) {
+  } else if (maxSimilarity > linkThreshold) {
     decision = 'link';
   } else {
     decision = 'novel';

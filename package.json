@@ -1,0 +1,61 @@
+{
+  "name": "cortex-engine",
+  "version": "0.1.0",
+  "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "cortex-engine": "dist/bin/serve.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "serve": "node dist/bin/serve.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/vitest run",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/vitest"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "better-sqlite3": "^11.7.0",
+    "yaml": "^2.7.0"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google-cloud/aiplatform": "^3.12.0",
+    "@google-cloud/firestore": "^7.11.0",
+    "firebase-admin": "^13.0.0",
+    "openai": "^4.77.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": { "optional": true },
+    "@google-cloud/aiplatform": { "optional": true },
+    "@google-cloud/firestore": { "optional": true },
+    "firebase-admin": { "optional": true },
+    "openai": { "optional": true }
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google-cloud/aiplatform": "^3.12.0",
+    "@google-cloud/firestore": "^7.11.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "firebase-admin": "^13.0.0",
+    "openai": "^4.77.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "cortex",
+    "cognitive",
+    "memory",
+    "fsrs",
+    "mcp",
+    "ai-agent",
+    "embeddings"
+  ],
+  "license": "MIT"
+}

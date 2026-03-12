@@ -239,8 +239,12 @@ const observeTool: ToolDefinition = {
     // Embed the observation
     const embedding = await ctx.embed.embed(text);
 
-    // Run prediction error gate against existing memories
-    const gate = await predictionErrorGate(store, embedding);
+    // Run prediction error gate with namespace-specific thresholds
+    const nsConfig = ctx.namespaces.getConfig(namespace);
+    const gate = await predictionErrorGate(store, embedding, {
+      merge: nsConfig.similarity_merge,
+      link: nsConfig.similarity_link,
+    });
 
     // Extract keywords
     const keywords = extractKeywords(text);
@@ -896,8 +900,12 @@ const dreamTool: ToolDefinition = {
           embedding = await ctx.embed.embed(obs.content);
         }
 
-        // Prediction error gate
-        const gate = await predictionErrorGate(store, embedding);
+        // Prediction error gate with namespace-specific thresholds
+        const nsConfig = ctx.namespaces.getConfig(namespace);
+        const gate = await predictionErrorGate(store, embedding, {
+          merge: nsConfig.similarity_merge,
+          link: nsConfig.similarity_link,
+        });
 
         if (gate.decision === 'novel') {
           // Create a new memory from this observation
