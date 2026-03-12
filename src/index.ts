@@ -8,6 +8,7 @@
 export type { CortexStore } from './core/store.js';
 export type { EmbedProvider } from './core/embed.js';
 export type { LLMProvider, GenerateOptions, GenerateJSONOptions } from './core/llm.js';
+export type { NLIProvider, NLIResult, NLILabel } from './core/nli.js';
 
 // Configuration
 export type {
@@ -92,6 +93,7 @@ export { NamespaceManager } from './namespace/manager.js';
 
 // Providers
 export { OllamaEmbedProvider, OllamaLLMProvider } from './providers/ollama.js';
+export { LocalNLIProvider, nliToCortexVerdict } from './providers/nli-http.js';
 
 // Triggers
 export { TriggerRegistry } from './triggers/registry.js';
