@@ -1,0 +1,105 @@
+name: Notify
+
+on:
+  # CI completion (success or failure)
+  check_suite:
+    types: [completed]
+
+  # PR reviews (Copilot or human)
+  pull_request_review:
+    types: [submitted]
+
+  # PR ready to merge (all checks pass)
+  pull_request:
+    types: [opened, synchronize]
+
+  # Dependabot PRs
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  # Notify when CI fails on a PR
+  ci-failure:
+    if: >
+      github.event_name == 'check_suite' &&
+      github.event.check_suite.conclusion == 'failure' &&
+      github.event.check_suite.pull_requests[0]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify CI failure
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          PR_NUM=$(echo '${{ toJSON(github.event.check_suite.pull_requests[0].number) }}')
+          curl -s \
+            -H "Authorization: Bearer $NTFY_TOKEN" \
+            -H "Title: CI Failed — PR #${PR_NUM}" \
+            -H "Priority: high" \
+            -H "Tags: x" \
+            -H "Click: https://github.com/${{ github.repository }}/pull/${PR_NUM}" \
+            -d "Type check failed on cortex-engine PR #${PR_NUM}. Check the logs." \
+            https://ntfy.idapixl.com/cortex-ci
+
+  # Notify when Copilot or a human submits a PR review
+  review-submitted:
+    if: github.event_name == 'pull_request_review'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify review submitted
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          REVIEWER="${{ github.event.review.user.login }}"
+          STATE="${{ github.event.review.state }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          case "$STATE" in
+            approved)
+              EMOJI="white_check_mark"
+              MSG="${REVIEWER} approved PR #${PR_NUM}: ${PR_TITLE}"
+              PRIORITY="default"
+              ;;
+            changes_requested)
+              EMOJI="warning"
+              MSG="${REVIEWER} requested changes on PR #${PR_NUM}: ${PR_TITLE}"
+              PRIORITY="high"
+              ;;
+            *)
+              EMOJI="speech_balloon"
+              MSG="${REVIEWER} reviewed PR #${PR_NUM}: ${PR_TITLE}"
+              PRIORITY="low"
+              ;;
+          esac
+
+          curl -s \
+            -H "Authorization: Bearer $NTFY_TOKEN" \
+            -H "Title: Code Review — cortex-engine" \
+            -H "Priority: $PRIORITY" \
+            -H "Tags: $EMOJI" \
+            -H "Click: https://github.com/${{ github.repository }}/pull/${PR_NUM}" \
+            -d "$MSG" \
+            https://ntfy.idapixl.com/cortex-ci
+
+  # Notify when a dependabot PR is opened
+  dependabot-pr:
+    if: >
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify dependabot PR
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          curl -s \
+            -H "Authorization: Bearer $NTFY_TOKEN" \
+            -H "Title: Dependabot — cortex-engine" \
+            -H "Priority: low" \
+            -H "Tags: package" \
+            -H "Click: https://github.com/${{ github.repository }}/pull/${PR_NUM}" \
+            -d "Dependabot opened PR #${PR_NUM}: ${PR_TITLE}" \
+            https://ntfy.idapixl.com/cortex-ci
