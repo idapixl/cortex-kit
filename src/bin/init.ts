@@ -16,7 +16,7 @@
  *   --obsidian   Create .obsidian/ structure
  */
 
-import { mkdirSync, writeFileSync, existsSync, readFileSync, cpSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, cpSync, readdirSync, chmodSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -239,7 +239,13 @@ function loadManifest(packageRoot: string): KitManifest | null {
     console.error('[cortex-kit] Warning: cortex-kit.json not found — skipping hook/skill installation.');
     return null;
   }
-  return JSON.parse(readFileSync(manifestPath, 'utf-8')) as KitManifest;
+  try {
+    return JSON.parse(readFileSync(manifestPath, 'utf-8')) as KitManifest;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[cortex-kit] Warning: Failed to parse cortex-kit.json: ${msg} — skipping hook/skill installation.`);
+    return null;
+  }
 }
 
 function installHooks(packageRoot: string, targetDir: string, hooks: string[]): string[] {
@@ -261,7 +267,10 @@ function installHooks(packageRoot: string, targetDir: string, hooks: string[]): 
       console.error(`[cortex-kit] Warning: hook not found: ${hookFile} — skipping.`);
       continue;
     }
-    cpSync(src, join(destDir, hookFile));
+    const dest = join(destDir, hookFile);
+    cpSync(src, dest);
+    // Set execute bit on Unix (no-op failure on Windows is fine)
+    try { chmodSync(dest, 0o755); } catch { /* Windows — no execute bit */ }
     installed.push(hookFile);
   }
 

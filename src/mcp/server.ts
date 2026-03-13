@@ -67,7 +67,8 @@ export async function createServer(config: CortexConfig): Promise<Server> {
 
   // 5. Load plugins and merge with core tools
   const coreTools = createTools();
-  const pluginTools = await loadPlugins(config.plugins ?? []);
+  const coreToolNames = new Set(coreTools.map(t => t.name));
+  const pluginTools = await loadPlugins(config.plugins ?? [], coreToolNames);
   const allTools = [...coreTools, ...pluginTools];
 
   // 6. Build tool context (includes allTools for trigger/bridge pipelines)
