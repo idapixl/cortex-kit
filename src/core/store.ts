@@ -93,6 +93,9 @@ export interface CortexStore {
   /** Get a document from a named collection by ID. */
   get(collection: string, id: string): Promise<Record<string, unknown> | null>;
 
+  /** Update a document in a named collection by ID. Merges updates. */
+  update(collection: string, id: string, updates: Record<string, unknown>): Promise<void>;
+
   /** Query documents from a named collection with filters. */
   query(
     collection: string,

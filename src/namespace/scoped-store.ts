@@ -122,6 +122,10 @@ export class ScopedStore implements CortexStore {
     return this.inner.get(this.prefix + collection, id);
   }
 
+  update(collection: string, id: string, updates: Record<string, unknown>): Promise<void> {
+    return this.inner.update(this.prefix + collection, id, updates);
+  }
+
   query(
     collection: string,
     filters: QueryFilter[],

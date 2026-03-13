@@ -37,6 +37,8 @@ export interface ToolContext {
   session: Session;
   triggers: TriggerRegistry;
   bridges: BridgeRegistry;
+  /** All registered tools (core + plugin), for trigger/bridge pipeline lookups. */
+  allTools: ToolDefinition[];
 }
 
 // ─── Tool Definition ──────────────────────────────────────────────────────────
@@ -51,6 +53,12 @@ export interface ToolDefinition {
     required?: string[];
   };
   handler: (args: Record<string, unknown>, ctx: ToolContext) => Promise<Record<string, unknown>>;
+}
+
+/** A plugin that contributes additional tools to the cortex engine. */
+export interface ToolPlugin {
+  name: string;
+  tools: ToolDefinition[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -201,8 +209,8 @@ const queryTool: ToolDefinition = {
 
     // Fire triggers and bridges after query
     const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
-    await fireTriggers(ctx, resolvedNs, 'query', text, { query: text, result_count: results.length }, [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool]);
-    await fireBridges(ctx, resolvedNs, 'query', { query: text, result_count: results.length }, [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool]);
+    await fireTriggers(ctx, resolvedNs, 'query', text, { query: text, result_count: results.length }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'query', { query: text, result_count: results.length }, ctx.allTools);
 
     return {
       query: text,
@@ -278,9 +286,8 @@ const observeTool: ToolDefinition = {
 
     // Fire triggers and bridges after observe
     const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
-    const allTools = [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool];
-    await fireTriggers(ctx, resolvedNs, 'observe', text, { observation_id: id, decision: gate.decision }, allTools);
-    await fireBridges(ctx, resolvedNs, 'observe', result, allTools);
+    await fireTriggers(ctx, resolvedNs, 'observe', text, { observation_id: id, decision: gate.decision }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'observe', result, ctx.allTools);
 
     return result;
   },
@@ -630,7 +637,6 @@ const validateTool: ToolDefinition = {
     const namespace = optStr(args, 'namespace');
 
     const store: CortexStore = ctx.namespaces.getStore(namespace);
-    const allTools = [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool];
 
     const memory = await store.getMemory(predictionId);
     if (!memory) {
@@ -665,8 +671,8 @@ const validateTool: ToolDefinition = {
     };
 
     const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
-    await fireTriggers(ctx, resolvedNs, 'validate', notes, { prediction_id: predictionId, outcome }, allTools);
-    await fireBridges(ctx, resolvedNs, 'validate', result, allTools);
+    await fireTriggers(ctx, resolvedNs, 'validate', notes, { prediction_id: predictionId, outcome }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'validate', result, ctx.allTools);
 
     return result;
   },
@@ -692,7 +698,6 @@ const believeTool: ToolDefinition = {
     const namespace = optStr(args, 'namespace');
 
     const store: CortexStore = ctx.namespaces.getStore(namespace);
-    const allTools = [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool];
 
     const memory = await store.getMemory(conceptId);
     if (!memory) {
@@ -731,8 +736,8 @@ const believeTool: ToolDefinition = {
     };
 
     const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
-    await fireTriggers(ctx, resolvedNs, 'believe', reason, { concept_id: conceptId, belief_id: beliefId }, allTools);
-    await fireBridges(ctx, resolvedNs, 'believe', result, allTools);
+    await fireTriggers(ctx, resolvedNs, 'believe', reason, { concept_id: conceptId, belief_id: beliefId }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'believe', result, ctx.allTools);
 
     return result;
   },
@@ -936,9 +941,8 @@ const digestTool: ToolDefinition = {
       salience,
     });
 
-    const allTools = [queryTool, observeTool, recallTool, neighborsTool, statsTool, opsAppendTool, opsQueryTool, opsUpdateTool, predictTool, validateTool, believeTool, reflectTool, wanderTool, dreamTool, digestTool];
-    await fireTriggers(ctx, resolvedNs, 'observe', content, { observation_ids: result.observation_ids }, allTools);
-    await fireBridges(ctx, resolvedNs, 'observe', { observation_ids: result.observation_ids, source_file: sourceFile }, allTools);
+    await fireTriggers(ctx, resolvedNs, 'observe', content, { observation_ids: result.observation_ids }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'observe', { observation_ids: result.observation_ids, source_file: sourceFile }, ctx.allTools);
 
     return {
       namespace: resolvedNs,
