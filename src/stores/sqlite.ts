@@ -581,12 +581,18 @@ export class SqliteCortexStore implements CortexStore {
   }
 
   async update(collection: string, id: string, updates: Record<string, unknown>): Promise<void> {
-    const existing = await this.get(collection, id);
-    if (!existing) throw new Error(`Document not found: ${collection}/${id}`);
-    const merged = { ...existing, ...updates, id };
-    this.db.prepare(
-      `INSERT OR REPLACE INTO ${this.t('generic_docs')} (collection, id, data) VALUES (?, ?, ?)`
-    ).run(collection, id, JSON.stringify(merged));
+    const txn = this.db.transaction(() => {
+      const row = this.db.prepare(
+        `SELECT data FROM ${this.t('generic_docs')} WHERE collection = ? AND id = ?`
+      ).get(collection, id) as Pick<GenericRow, 'data'> | undefined;
+      if (!row) throw new Error(`Document not found: ${collection}/${id}`);
+      const existing = JSON.parse(row.data) as Record<string, unknown>;
+      const merged = { ...existing, ...updates, id };
+      this.db.prepare(
+        `INSERT OR REPLACE INTO ${this.t('generic_docs')} (collection, id, data) VALUES (?, ?, ?)`
+      ).run(collection, id, JSON.stringify(merged));
+    });
+    txn();
   }
 
   async query(

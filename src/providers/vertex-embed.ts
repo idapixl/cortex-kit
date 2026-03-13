@@ -7,6 +7,13 @@
 
 import type { EmbedProvider } from '../core/embed.js';
 
+export type VertexEmbedTaskType =
+  | 'RETRIEVAL_DOCUMENT'
+  | 'RETRIEVAL_QUERY'
+  | 'SEMANTIC_SIMILARITY'
+  | 'CLASSIFICATION'
+  | 'CLUSTERING';
+
 export interface VertexEmbedOptions {
   /** GCP project ID. Falls back to GOOGLE_CLOUD_PROJECT env var. */
   projectId?: string;
@@ -18,6 +25,8 @@ export interface VertexEmbedOptions {
   dimensions?: number;
   /** Max concurrent requests per batch (default: 5). */
   batchConcurrency?: number;
+  /** Default task type for embeddings (default: SEMANTIC_SIMILARITY). */
+  taskType?: VertexEmbedTaskType;
 }
 
 export class VertexEmbedProvider implements EmbedProvider {
@@ -28,9 +37,10 @@ export class VertexEmbedProvider implements EmbedProvider {
   private readonly location: string;
   private readonly model: string;
   private readonly batchConcurrency: number;
+  private readonly taskType: VertexEmbedTaskType;
 
-  private client: import('@google-cloud/aiplatform').PredictionServiceClient | null = null;
-  private helpers: typeof import('@google-cloud/aiplatform').helpers | null = null;
+  private readonly client: import('@google-cloud/aiplatform').PredictionServiceClient;
+  private readonly helpers: typeof import('@google-cloud/aiplatform').helpers;
 
   constructor(
     options: VertexEmbedOptions,
@@ -42,6 +52,7 @@ export class VertexEmbedProvider implements EmbedProvider {
     this.model = options.model ?? 'text-embedding-004';
     this.dimensions = options.dimensions ?? 768;
     this.batchConcurrency = options.batchConcurrency ?? 5;
+    this.taskType = options.taskType ?? 'SEMANTIC_SIMILARITY';
 
     if (!this.projectId) {
       throw new Error('VertexEmbedProvider: projectId is required (config or GOOGLE_CLOUD_PROJECT env)');
@@ -56,16 +67,16 @@ export class VertexEmbedProvider implements EmbedProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    const instance = this.helpers!.toValue({
+    const instance = this.helpers.toValue({
       content: text,
-      task_type: 'RETRIEVAL_DOCUMENT',
+      task_type: this.taskType,
     });
 
-    const parameters = this.helpers!.toValue({
+    const parameters = this.helpers.toValue({
       outputDimensionality: this.dimensions,
     });
 
-    const [response] = await this.client!.predict({
+    const [response] = await this.client.predict({
       endpoint: this.endpoint,
       instances: [instance!],
       parameters,

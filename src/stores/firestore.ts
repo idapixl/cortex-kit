@@ -547,7 +547,8 @@ export class FirestoreCortexStore implements CortexStore {
   }
 
   async update(collection: string, id: string, updates: Record<string, unknown>): Promise<void> {
-    await this.col(collection).doc(id).update(updates);
+    const { id: _id, ...rest } = updates;
+    await this.col(collection).doc(id).update(rest);
   }
 
   async query(
