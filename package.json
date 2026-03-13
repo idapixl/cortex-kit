@@ -61,5 +61,34 @@
     "ai-agent",
     "embeddings"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "author": "Fozikio <hello@fozikio.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fozikio/cortex-engine.git"
+  },
+  "homepage": "https://github.com/Fozikio/cortex-engine#readme",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./stores/firestore": {
+      "import": "./dist/stores/firestore.js",
+      "types": "./dist/stores/firestore.d.ts"
+    },
+    "./stores/sqlite": {
+      "import": "./dist/stores/sqlite.js",
+      "types": "./dist/stores/sqlite.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/server.js",
+      "types": "./dist/mcp/server.d.ts"
+    }
+  }
 }
