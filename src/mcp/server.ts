@@ -33,7 +33,7 @@ export async function createServer(config: CortexConfig): Promise<Server> {
   const llm = await createLLMProvider(config);
 
   // 2. Pre-initialize store backend (async for Firestore dynamic import)
-  const firestoreDb = config.store === 'firestore'
+  const firestoreInit = config.store === 'firestore'
     ? await initFirestoreDb(config)
     : null;
 
@@ -46,7 +46,7 @@ export async function createServer(config: CortexConfig): Promise<Server> {
       );
     }
     if (config.store === 'firestore') {
-      return new FirestoreCortexStore(firestoreDb!, prefix);
+      return new FirestoreCortexStore(firestoreInit!.db, prefix, firestoreInit!.FieldValue);
     }
     throw new Error(`Unsupported store: ${config.store}`);
   });
@@ -147,19 +147,22 @@ export async function startServer(config: CortexConfig): Promise<void> {
 
 // Firestore DB init — lazy-loads firebase-admin via dynamic import() to avoid
 // requiring the SDK when running in SQLite-only mode.
-async function initFirestoreDb(config: CortexConfig): Promise<import('@google-cloud/firestore').Firestore> {
+async function initFirestoreDb(config: CortexConfig): Promise<{
+  db: import('@google-cloud/firestore').Firestore;
+  FieldValue: typeof import('@google-cloud/firestore').FieldValue;
+}> {
   const { getApps, initializeApp } = await import('firebase-admin/app');
   if (getApps().length === 0) {
     initializeApp({
       projectId: config.store_options?.gcp_project_id,
     });
   }
-  const { getFirestore } = await import('firebase-admin/firestore');
+  const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
   const db = config.store_options?.firestore_database_id
     ? getFirestore(config.store_options.firestore_database_id)
     : getFirestore();
   db.settings({ ignoreUndefinedProperties: true });
-  return db;
+  return { db, FieldValue };
 }
 
 async function createEmbedProvider(config: CortexConfig): Promise<EmbedProvider> {

@@ -9,8 +9,7 @@
  * CortexStore interface, so engines work identically on either backend.
  */
 
-import type { Firestore, CollectionReference, DocumentData } from '@google-cloud/firestore';
-import { FieldValue } from '@google-cloud/firestore';
+import type { Firestore, CollectionReference, DocumentData, FieldValue as FieldValueType } from '@google-cloud/firestore';
 import type { CortexStore } from '../core/store.js';
 import type {
   Memory,
@@ -63,9 +62,18 @@ function docProvenance(data: DocumentData): ModelProvenance | undefined {
   };
 }
 
+/**
+ * Module-level FieldValue reference. Set by the store constructor from injected or
+ * dynamically imported firebase-admin. This avoids the ESM dual-package hazard where
+ * @google-cloud/firestore installed in the engine creates different class identities
+ * than the one installed in the host service.
+ */
+let _FieldValue: typeof FieldValueType | null = null;
+
 /** Convert a number[] embedding to Firestore VectorValue. */
-function toVector(embedding: number[]): ReturnType<typeof FieldValue.vector> {
-  return FieldValue.vector(embedding);
+function toVector(embedding: number[]): unknown {
+  if (!_FieldValue) throw new Error('FirestoreCortexStore not initialized — FieldValue not set');
+  return _FieldValue.vector(embedding);
 }
 
 /** Convert a Firestore VectorValue back to number[]. */
@@ -216,14 +224,22 @@ export class FirestoreCortexStore implements CortexStore {
   private db: Firestore;
   private ns: string;
 
-  constructor(db: Firestore, namespace?: string) {
+  constructor(db: Firestore, namespace?: string, fieldValue?: typeof FieldValueType) {
     this.db = db;
     this.ns = namespace ?? '';
+    if (fieldValue) {
+      _FieldValue = fieldValue;
+    }
+  }
+
+  /** Inject the host's FieldValue to avoid ESM dual-package class identity issues. */
+  static setFieldValue(fv: typeof FieldValueType): void {
+    _FieldValue = fv;
   }
 
   /** Create a FirestoreCortexStore from firebase-admin Firestore instance. */
-  static fromFirestore(db: Firestore, namespace?: string): FirestoreCortexStore {
-    return new FirestoreCortexStore(db, namespace);
+  static fromFirestore(db: Firestore, namespace?: string, fieldValue?: typeof FieldValueType): FirestoreCortexStore {
+    return new FirestoreCortexStore(db, namespace, fieldValue);
   }
 
   /** Get the prefixed collection name. */
@@ -307,7 +323,7 @@ export class FirestoreCortexStore implements CortexStore {
       .where('faded', '!=', true)
       .findNearest({
         vectorField: 'embedding',
-        queryVector: FieldValue.vector(embedding),
+        queryVector: toVector(embedding) as import('@google-cloud/firestore').VectorValue,
         limit,
         distanceMeasure: 'COSINE',
         distanceResultField: '_distance',
@@ -327,7 +343,7 @@ export class FirestoreCortexStore implements CortexStore {
 
   async touchMemory(id: string, fsrsUpdates: Partial<FSRSData>): Promise<void> {
     const data: Record<string, unknown> = {
-      access_count: FieldValue.increment(1),
+      access_count: _FieldValue!.increment(1),
       last_accessed: toTimestamp(new Date()),
       updated_at: toTimestamp(new Date()),
     };
