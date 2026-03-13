@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
-# cortex-telemetry.sh — PostToolUse hook
-# Tracks cortex retrieval tool calls for retry detection feedback.
-# Part of cortex-kit — sends feedback to cortex API.
+# ============================================================================
+# cortex-telemetry.sh — Claude Code Hook
+# ============================================================================
+# Event:    PostToolUse
+# Purpose:  Tracks cortex retrieval tool usage and detects retries (repeat
+#           retrieval calls within 60s), sending feedback to the cortex API
+#           for retrieval quality improvement.
+# How:      Logs each cortex retrieval call (query, recall, wander, etc.) to
+#           .claude/state/cortex-calls.log. If two calls happen within 60s,
+#           POSTs a "retry" signal to CORTEX_API_URL/api/v2/retrieval-feedback.
+# Env:      CORTEX_API_URL, CORTEX_API_TOKEN (optional — skips API call if unset)
+# Disable:  Delete this file from .claude/hooks/ — no other config needed.
+# Part of:  cortex-kit — portable, fire-and-forget HTTP calls.
+# ============================================================================
 
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null)

@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-# observe-first.sh — PreToolUse hook (Write|Edit)
-# Reminds agents to call observe() before writing to memory directories.
+# ============================================================================
+# observe-first.sh — Claude Code Hook
+# ============================================================================
+# Event:    PreToolUse (Write, Edit)
+# Purpose:  Reminds agents to call observe() or query() before writing to
+#           memory directories (Mind/, Journal/, memory/).
+# How:      Checks the file path of Write/Edit operations. If targeting a
+#           memory directory, injects a system message reminder.
+# Disable:  Delete this file from .claude/hooks/ — no other config needed.
+# Part of:  cortex-kit — portable, no project-specific paths.
+# ============================================================================
 
 INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null)

@@ -40,6 +40,10 @@ npm run serve
 
 Requires Node.js 20 or later.
 
+### Agent-First Setup
+
+The fastest path: open an AI agent in an empty directory and say *"set up a cortex workspace."* The agent runs `npx cortex-kit init`, reads the generated files, and is immediately productive. See **[docs/agent-first-setup.md](docs/agent-first-setup.md)** for the full guide.
+
 ### Development
 
 ```bash
@@ -55,6 +59,90 @@ npm run test:watch
 | `CORTEX_API_TOKEN` | Yes | Authentication token for the HTTP API |
 
 Additional variables are required depending on which providers you enable (Firestore, Vertex AI, OpenAI, etc.). See `docs/` for provider-specific configuration.
+
+## Hooks, Skills & Agents
+
+`cortex-kit init` automatically installs hooks, skills, and agent definitions from the `cortex-kit.json` manifest into the target workspace. These live in `.claude/hooks/` and `.claude/skills/` after init.
+
+### Hooks
+
+Hooks are shell scripts that integrate into Claude Code's event system. They fire automatically — no agent action required.
+
+| Hook | Event | What It Does | Requires |
+|------|-------|-------------|----------|
+| `cognitive-grounding.sh` | `UserPromptSubmit` | Nudges the agent to call `query()` before evaluation, design, review, or creation work | — |
+| `observe-first.sh` | `PreToolUse` (Write/Edit) | Warns if writing to Mind/, Journal/, or memory/ without calling `observe()` or `query()` first | — |
+| `cortex-telemetry.sh` | `PostToolUse` | Tracks cortex retrieval calls and detects retries (2 calls within 60s), sends feedback to the cortex API | `CORTEX_API_URL`, `CORTEX_API_TOKEN` (optional) |
+| `session-lifecycle.sh` | `SessionStart` | Resets session-scoped state files (telemetry log, push-gate state) | — |
+| `project-board-gate.sh` | `PreToolUse` (Bash) | Blocks `git push` to tracked repos until board updates and/or ops logging are done | `.claude/state/project-boards.json` config |
+
+**To disable a hook:** Delete the `.sh` file from `.claude/hooks/`. No other config changes needed.
+
+**To customize project-board-gate:** Create `.claude/state/project-boards.json` with your repos and requirements:
+
+```json
+{
+  "enabled": true,
+  "strength": "block",
+  "on_push": {
+    "require_board_update": true,
+    "require_ops_log": false
+  },
+  "repos": {
+    "my-repo": {
+      "board_number": 5,
+      "board_owner": "my-org",
+      "description": "My project"
+    }
+  }
+}
+```
+
+Set `"strength": "off"` to disable the gate without removing the hook.
+
+### Skills
+
+Skills are invocable workflows that agents can use via `/skill-name`.
+
+| Skill | When to Use | What It Provides |
+|-------|-------------|-----------------|
+| `cortex-query` | Before evaluation, review, design, or creation work | Best practices for querying cortex — specificity, keyword mode, neighbor exploration, anti-patterns |
+| `cortex-review` | When reviewing code, designs, or proposals | A structured review workflow that grounds feedback in cortex memory, with a standard output format |
+
+### Hookify Rules
+
+The manifest declares hookify rules — declarative hook patterns managed by the [hookify](https://github.com/fozikio/hookify) tool. These are **not** auto-installed by `cortex-kit init` (hookify needs its own setup). Init prints a reminder:
+
+```
+Recommended hookify rules available. Run `cortex-kit install-rules` to install.
+```
+
+| Rule | Purpose |
+|------|---------|
+| `cognitive-grounding` | Declarative version of the cognitive-grounding hook |
+| `observe-first` | Declarative version of the observe-first hook |
+| `note-about-doing` | Reminds agents to observe what they're doing as they work |
+
+### Agents
+
+| Agent | Description |
+|-------|-------------|
+| `cortex-researcher` | Deep research agent that queries cortex before external sources, observes novel findings back into memory |
+
+### How Auto-Install Works
+
+1. `cortex-kit init` reads `cortex-kit.json` from the package root
+2. For each hook in `contents.hooks`: copies `hooks/{name}.sh` into `{workspace}/.claude/hooks/`
+3. For each skill in `contents.skills`: copies `skills/{name}/` directory into `{workspace}/.claude/skills/`
+4. If `contents.hookify_rules` is non-empty: prints a message (no interactive prompts)
+5. Missing source files are skipped with a warning — init never fails due to missing assets
+
+### Overriding Cortex Hooks
+
+To override a hook's behavior without removing it:
+1. Edit the `.sh` file in your workspace's `.claude/hooks/` directly — it's a plain copy, not a symlink
+2. Re-running `cortex-kit init --here` will overwrite your changes (it copies fresh from the package)
+3. To preserve customizations across re-init, rename the hook file (hooks are matched by filename in Claude Code settings, not by the cortex-kit manifest)
 
 ## Related Projects
 

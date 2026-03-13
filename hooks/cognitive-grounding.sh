@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-# cognitive-grounding.sh — UserPromptSubmit hook
-# Reminds agents to call cortex query() before substantive cognitive work.
-# Part of cortex-kit — portable, no project-specific paths.
+# ============================================================================
+# cognitive-grounding.sh — Claude Code Hook
+# ============================================================================
+# Event:    UserPromptSubmit
+# Purpose:  Reminds agents to call cortex query() before substantive work
+#           (evaluation, design, review, architecture, etc.)
+# How:      Pattern-matches the user prompt for cognitive-work keywords.
+#           If matched, injects a system message nudging the agent to query().
+# Disable:  Delete this file from .claude/hooks/ — no other config needed.
+# Part of:  cortex-kit — portable, no project-specific paths.
+# ============================================================================
 
 INPUT=$(cat)
 PROMPT=$(echo "$INPUT" | jq -r '.user_prompt // ""' 2>/dev/null)
