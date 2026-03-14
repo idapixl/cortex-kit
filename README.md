@@ -28,17 +28,26 @@ Runs as a standalone Cloud Run service or embedded in any Node.js environment.
 | `providers` | Embedding provider implementations |
 | `bin` | Entry points: `serve.js` (HTTP + MCP), `cli.js` (admin CLI) |
 
-## Getting Started
+## Quick Start
 
 ```bash
-git clone https://github.com/fozikio/cortex-engine.git
-cd cortex-engine
-npm install
-npm run build
-npm run serve
+npm install cortex-engine
+npx fozikio init my-agent
+cd my-agent
+npx cortex-engine   # starts MCP server
 ```
 
-Requires Node.js 20 or later.
+Your agent now has 17 cognitive tools. See **[docs/quick-start.md](docs/quick-start.md)** for the full 5-minute setup.
+
+### Multi-Agent
+
+```bash
+npx fozikio agent add researcher --description "Research agent"
+npx fozikio agent add trader --description "Trading signals"
+npx fozikio agent generate-mcp   # writes .mcp.json with scoped servers
+```
+
+Each agent gets isolated memory via namespaces. See **[docs/multi-agent-design.md](docs/multi-agent-design.md)** for architecture details.
 
 ### Agent-First Setup
 
