@@ -64,8 +64,8 @@ export interface CortexConfig {
   /** Storage backend: 'sqlite' | 'firestore' */
   store: 'sqlite' | 'firestore';
 
-  /** Embedding provider: 'ollama' | 'vertex' | 'openai' */
-  embed: 'ollama' | 'vertex' | 'openai';
+  /** Embedding provider: 'built-in' (default, no setup) | 'ollama' | 'vertex' | 'openai' */
+  embed: 'built-in' | 'ollama' | 'vertex' | 'openai';
 
   /** LLM provider: 'ollama' | 'gemini' | 'anthropic' | 'openai' */
   llm: 'ollama' | 'gemini' | 'anthropic' | 'openai';
@@ -151,7 +151,7 @@ export interface AgentConfig {
 
 export const DEFAULT_CONFIG: CortexConfig = {
   store: 'sqlite',
-  embed: 'ollama',
+  embed: 'built-in',
   llm: 'ollama',
   namespaces: {
     default: {

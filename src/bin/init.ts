@@ -9,7 +9,7 @@
  *
  * Options:
  *   --store sqlite|firestore   Storage backend (default: sqlite)
- *   --embed ollama|vertex|openai   Embedding provider (default: ollama)
+ *   --embed built-in|ollama|vertex|openai   Embedding provider (default: built-in)
  *   --llm ollama|gemini|anthropic|openai   LLM provider (default: ollama)
  *   --namespace <name>   Default namespace name (default: default)
  *   --here   Scaffold into current directory instead of creating <name>/
@@ -32,7 +32,7 @@ interface KitManifest {
 }
 
 type StoreOption = 'sqlite' | 'firestore';
-type EmbedOption = 'ollama' | 'vertex' | 'openai';
+type EmbedOption = 'built-in' | 'ollama' | 'vertex' | 'openai';
 type LlmOption = 'ollama' | 'gemini' | 'anthropic' | 'openai';
 
 interface InitOptions {
@@ -51,7 +51,7 @@ export function parseInitArgs(args: string[]): InitOptions | null {
   const opts: InitOptions = {
     name: '',
     store: 'sqlite',
-    embed: 'ollama',
+    embed: 'built-in',
     llm: 'ollama',
     namespace: 'default',
     here: false,
@@ -75,8 +75,8 @@ export function parseInitArgs(args: string[]): InitOptions | null {
       opts.store = val;
     } else if (arg === '--embed') {
       const val = args[++i];
-      if (val !== 'ollama' && val !== 'vertex' && val !== 'openai') {
-        console.error(`[fozikio] Invalid --embed value: ${val}. Must be ollama, vertex, or openai.`);
+      if (val !== 'built-in' && val !== 'ollama' && val !== 'vertex' && val !== 'openai') {
+        console.error(`[fozikio] Invalid --embed value: ${val}. Must be built-in, ollama, vertex, or openai.`);
         return null;
       }
       opts.embed = val;

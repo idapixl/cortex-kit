@@ -167,6 +167,10 @@ async function initFirestoreDb(config: CortexConfig): Promise<{
 
 async function createEmbedProvider(config: CortexConfig): Promise<EmbedProvider> {
   switch (config.embed) {
+    case 'built-in': {
+      const { BuiltInEmbedProvider } = await import('../providers/builtin-embed.js');
+      return new BuiltInEmbedProvider();
+    }
     case 'ollama':
       return new OllamaEmbedProvider({
         model: config.embed_options?.ollama_model,

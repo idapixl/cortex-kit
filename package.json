@@ -1,6 +1,6 @@
 {
   "name": "cortex-engine",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
@@ -20,6 +20,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "better-sqlite3": "^11.7.0",
     "yaml": "^2.7.0"
@@ -33,12 +34,24 @@
     "openai": "^4.77.0"
   },
   "peerDependenciesMeta": {
-    "@anthropic-ai/sdk": { "optional": true },
-    "@google-cloud/aiplatform": { "optional": true },
-    "@google-cloud/firestore": { "optional": true },
-    "@google-cloud/vertexai": { "optional": true },
-    "firebase-admin": { "optional": true },
-    "openai": { "optional": true }
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "@google-cloud/aiplatform": {
+      "optional": true
+    },
+    "@google-cloud/firestore": {
+      "optional": true
+    },
+    "@google-cloud/vertexai": {
+      "optional": true
+    },
+    "firebase-admin": {
+      "optional": true
+    },
+    "openai": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
