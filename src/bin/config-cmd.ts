@@ -20,10 +20,12 @@ import type { CortexConfig, AgentConfig } from '../core/config.js';
 
 /**
  * Find the config file path — mirrors the search order in config-loader.ts.
+ * Checks agent.yaml (new format) before config.yaml (legacy format).
  * Returns null if no config file exists (defaults are in use).
  */
 function findConfigPath(cwd: string = process.cwd()): string | null {
   const searchPaths = [
+    resolve(cwd, '.fozikio', 'agent.yaml'),
     resolve(cwd, '.fozikio', 'config.yaml'),
     resolve(cwd, 'cortex.config.yaml'),
     resolve(cwd, 'config.yaml'),
@@ -38,9 +40,10 @@ function findConfigPath(cwd: string = process.cwd()): string | null {
 
 /**
  * Default write location when no config exists yet.
+ * Uses agent.yaml (new format).
  */
 function defaultConfigPath(cwd: string = process.cwd()): string {
-  return resolve(cwd, '.fozikio', 'config.yaml');
+  return resolve(cwd, '.fozikio', 'agent.yaml');
 }
 
 // ─── Config Read/Write ────────────────────────────────────────────────────────

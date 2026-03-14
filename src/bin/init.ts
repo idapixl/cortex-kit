@@ -116,31 +116,112 @@ export function parseInitArgs(args: string[]): InitOptions | null {
 
 // ─── Templates ─────────────────────────────────────────────────────────────
 
-function buildConfigYaml(opts: InitOptions): string {
-  return `agent:
+function buildAgentYaml(opts: InitOptions): string {
+  return `# Fozikio Agent — Identity & Connection Manifest
+
+agent:
   name: ${opts.name}
-  type: general
+  version: "1.0"
+
+identity:
+  profile: mind/profile.md
+  session_state: state/session-state.md
 
 cortex:
-  store: ${opts.store}
-  embed: ${opts.embed}
-  llm: ${opts.llm}
+  ${opts.namespace}:
+    store: ${opts.store}
+    embed: ${opts.embed}
+    primary: true
 
-  namespaces:
-    ${opts.namespace}:
-      default: true
-      description: "Default namespace"
-      cognitive_tools:
-        - observe
-        - query
-        - recall
-        - neighbors
-        - predict
-        - reflect
-        - dream
-      collections_prefix: ""
+credentials:
+  dir: credentials/
+  encryption: none
 `;
 }
+
+function buildAgentKitJson(): string {
+  return `{
+  "version": "1.0",
+  "hooks": [],
+  "skills": [],
+  "agents": []
+}
+`;
+}
+
+function buildFozikioReadme(name: string): string {
+  return `# .fozikio/
+
+This directory is the agent workspace manifest for **${name}**.
+
+It is read by cortex-engine and cortex-kit to configure the agent's identity,
+storage backend, embedding provider, and installed components.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| \`agent.yaml\` | Identity manifest — agent name, cortex config, credentials |
+| \`agent-kit.json\` | Installable components — hooks, skills, agents |
+| \`mind/profile.md\` | Agent identity profile (who this agent is) |
+| \`knowledge/_index.md\` | Knowledge base index |
+| \`journal/\` | Session journal entries |
+| \`state/templates/\` | Note templates for structured memory |
+| \`credentials/\` | Local credentials (gitignored) |
+
+## Usage
+
+Start the MCP server:
+\`\`\`
+npx cortex-engine
+\`\`\`
+
+Or configure via .mcp.json and let your MCP client manage the lifecycle.
+`;
+}
+
+function buildMindProfile(name: string): string {
+  return `---
+type: mind
+status: active
+tags: []
+---
+
+# ${name}
+
+## Identity
+
+*Who is this agent? Fill in your identity here.*
+
+## Values
+
+-
+
+## Working Style
+
+-
+
+## Goals
+
+-
+
+## Relationships
+
+*Key people, systems, and projects this agent interacts with.*
+`;
+}
+
+const KNOWLEDGE_INDEX = `---
+type: knowledge
+status: active
+tags: []
+---
+
+# Knowledge Index
+
+*Reference material, decisions, and patterns.*
+`;
+
 
 const MCP_JSON = `{
   "mcpServers": {
@@ -328,10 +409,41 @@ export function runInit(args: string[]): void {
   // Create target directory
   mkdirSync(targetDir, { recursive: true });
 
-  // .fozikio/config.yaml
+  // .fozikio/ — agent manifest directory
   const fozikioDir = join(targetDir, '.fozikio');
   mkdirSync(fozikioDir, { recursive: true });
-  writeFileSync(join(fozikioDir, 'config.yaml'), buildConfigYaml(opts), 'utf-8');
+
+  // .fozikio/agent.yaml
+  writeFileSync(join(fozikioDir, 'agent.yaml'), buildAgentYaml(opts), 'utf-8');
+
+  // .fozikio/agent-kit.json
+  writeFileSync(join(fozikioDir, 'agent-kit.json'), buildAgentKitJson(), 'utf-8');
+
+  // .fozikio/README.md
+  writeFileSync(join(fozikioDir, 'README.md'), buildFozikioReadme(opts.name), 'utf-8');
+
+  // .fozikio/mind/profile.md
+  const mindDir = join(fozikioDir, 'mind');
+  mkdirSync(mindDir, { recursive: true });
+  writeFileSync(join(mindDir, 'profile.md'), buildMindProfile(opts.name), 'utf-8');
+
+  // .fozikio/knowledge/_index.md
+  const knowledgeDir = join(fozikioDir, 'knowledge');
+  mkdirSync(knowledgeDir, { recursive: true });
+  writeFileSync(join(knowledgeDir, '_index.md'), KNOWLEDGE_INDEX, 'utf-8');
+
+  // .fozikio/journal/ (empty dir — needs a placeholder so it exists in git)
+  const journalDir = join(fozikioDir, 'journal');
+  mkdirSync(journalDir, { recursive: true });
+
+  // .fozikio/state/templates/ (empty dir)
+  const stateTemplatesDir = join(fozikioDir, 'state', 'templates');
+  mkdirSync(stateTemplatesDir, { recursive: true });
+
+  // .fozikio/credentials/.gitignore
+  const credentialsDir = join(fozikioDir, 'credentials');
+  mkdirSync(credentialsDir, { recursive: true });
+  writeFileSync(join(credentialsDir, '.gitignore'), '*\n!.gitignore\n', 'utf-8');
 
   // .mcp.json
   writeFileSync(join(targetDir, '.mcp.json'), MCP_JSON, 'utf-8');
@@ -372,7 +484,14 @@ export function runInit(args: string[]): void {
   console.error(`[cortex-kit] Workspace scaffolded at: ${targetDir}`);
   console.error('');
   console.error('Files created:');
-  console.error(`  ${relativePath}/.fozikio/config.yaml`);
+  console.error(`  ${relativePath}/.fozikio/agent.yaml`);
+  console.error(`  ${relativePath}/.fozikio/agent-kit.json`);
+  console.error(`  ${relativePath}/.fozikio/README.md`);
+  console.error(`  ${relativePath}/.fozikio/mind/profile.md`);
+  console.error(`  ${relativePath}/.fozikio/knowledge/_index.md`);
+  console.error(`  ${relativePath}/.fozikio/journal/`);
+  console.error(`  ${relativePath}/.fozikio/state/templates/`);
+  console.error(`  ${relativePath}/.fozikio/credentials/.gitignore`);
   console.error(`  ${relativePath}/.mcp.json`);
   console.error(`  ${relativePath}/CLAUDE.md`);
   console.error(`  ${relativePath}/AGENTS.md`);
@@ -403,7 +522,7 @@ export function runInit(args: string[]): void {
   if (!opts.here) {
     console.error(`  cd ${opts.name}`);
   }
-  console.error(`  # Edit .fozikio/config.yaml to configure your store and providers`);
+  console.error(`  # Edit .fozikio/agent.yaml to configure your store and providers`);
   console.error(`  # Add cortex to your MCP client using .mcp.json`);
   console.error(`  npx cortex-engine   # start the MCP server`);
 }
