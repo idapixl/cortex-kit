@@ -155,8 +155,6 @@ To override a hook's behavior without removing it:
 
 ## Related Projects
 
-- [idapixl/idapixl-cortex](https://github.com/idapixl/idapixl-cortex) — private production instance of cortex-engine, deployed on Cloud Run
-- [fozikio/dashboard](https://github.com/fozikio/dashboard) — agent workspace dashboard backed by cortex-engine
 
 ## License
 
