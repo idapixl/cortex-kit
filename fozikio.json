@@ -1,5 +1,5 @@
 {
-  "name": "cortex-kit",
+  "name": "cortex-engine",
   "version": "0.1.0",
   "description": "Portable agent infrastructure for cortex-powered AI agents",
   "requires": {
@@ -8,7 +8,6 @@
   },
   "contents": {
     "hooks": ["cognitive-grounding", "observe-first", "cortex-telemetry", "session-lifecycle", "project-board-gate"],
-    "hookify_rules": ["cognitive-grounding", "observe-first", "note-about-doing"],
     "skills": ["cortex-query", "cortex-review"],
     "agents": ["cortex-researcher"]
   }

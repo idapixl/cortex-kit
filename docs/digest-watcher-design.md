@@ -8,7 +8,7 @@ status: draft
 
 ## Problem
 
-The digest pipeline exists (`digestDocument()` in cortex-engine, `cortex-kit digest` CLI) but requires manual invocation. Users set `directive: digest` in frontmatter via Obsidian's Meta Bind toolbar, then... nothing happens. There's no automated trigger.
+The digest pipeline exists (`digestDocument()` in cortex-engine, `fozikio digest` CLI) but requires manual invocation. Users set `directive: digest` in frontmatter via Obsidian's Meta Bind toolbar, then... nothing happens. There's no automated trigger.
 
 ## Goal
 
@@ -73,38 +73,38 @@ Check staged files for `directive: digest` in a post-commit hook.
 
 **Verdict:** Too delayed. Digest should feel immediate.
 
-### Option D: cortex-kit watch subcommand
+### Option D: fozikio watch subcommand
 
-Add a `cortex-kit watch <dir>` command that combines the CLI with the watcher.
+Add a `fozikio watch <dir>` command that combines the CLI with the watcher.
 
 **Pros:**
 - Single tool (CLI + watcher in one)
-- `cortex-kit watch ./notes` is a clean developer experience
+- `fozikio watch ./notes` is a clean developer experience
 
 **Cons:**
 - None significant — this is Option A packaged better
 
-**Verdict:** This is Option A implemented as part of cortex-kit. Best of both worlds.
+**Verdict:** This is Option A implemented as part of fozikio. Best of both worlds.
 
-## Recommendation: Option D (cortex-kit watch)
+## Recommendation: Option D (fozikio watch)
 
 ### API
 
 ```bash
 # Watch a directory for digest-ready files
-cortex-kit watch ./notes
+fozikio watch ./notes
 
 # Watch with custom config
-cortex-kit watch ./notes --namespace myproject --pipeline deep
+fozikio watch ./notes --namespace myproject --pipeline deep
 
 # Watch with polling (for network drives)
-cortex-kit watch ./notes --poll 2000
+fozikio watch ./notes --poll 2000
 ```
 
 ### Architecture
 
 ```
-cortex-kit watch <dir>
+fozikio watch <dir>
   └── chokidar watches dir/**/*.md
        └── on change: parseFrontmatter()
             └── if directive === 'digest':
@@ -130,5 +130,5 @@ cortex-kit watch <dir>
 ## Next Steps
 1. Add chokidar to cortex-engine dependencies
 2. Implement `src/watchers/digest-watcher.ts`
-3. Wire into `cortex-kit watch` CLI command
+3. Wire into `fozikio watch` CLI command
 4. Test with Obsidian Meta Bind toolbar

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# cortex-kit setup script
+# cortex-engine setup script
 # Usage: ./setup.sh --target /path/to/your/project
+# Prefer: npx fozikio init (does this automatically)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET=""
@@ -28,24 +29,13 @@ fi
 CLAUDE_DIR="$TARGET/.claude"
 mkdir -p "$CLAUDE_DIR/hooks" "$CLAUDE_DIR/skills" "$CLAUDE_DIR/agents" "$CLAUDE_DIR/state"
 
-echo "Installing cortex-kit to $TARGET..."
+echo "Installing cortex-engine to $TARGET..."
 
 # Symlink hooks (update automatically with git pull)
 for hook in "$SCRIPT_DIR"/hooks/*.sh; do
   name=$(basename "$hook")
   ln -sf "$hook" "$CLAUDE_DIR/hooks/$name"
   echo "  Linked hook: $name"
-done
-
-# Copy hookify rules (users customize these)
-for rule in "$SCRIPT_DIR"/hookify-rules/*.md; do
-  name=$(basename "$rule")
-  if [[ -f "$CLAUDE_DIR/$name" ]]; then
-    echo "  Skipped rule (exists): $name"
-  else
-    cp "$rule" "$CLAUDE_DIR/$name"
-    echo "  Copied rule: $name"
-  fi
 done
 
 # Symlink skills
@@ -68,13 +58,12 @@ for agent in "$SCRIPT_DIR"/agents/*.md; do
 done
 
 # Write version file
-VERSION=$(jq -r '.version' "$SCRIPT_DIR/cortex-kit.json")
-echo "$VERSION" > "$CLAUDE_DIR/cortex-kit.version"
+VERSION=$(jq -r '.version' "$SCRIPT_DIR/fozikio.json")
+echo "$VERSION" > "$CLAUDE_DIR/cortex-engine.version"
 
 echo ""
-echo "cortex-kit v$VERSION installed successfully!"
+echo "cortex-engine v$VERSION installed successfully!"
 echo ""
 echo "Next steps:"
 echo "  1. Set CORTEX_API_URL and CORTEX_API_TOKEN in your environment"
 echo "  2. Register hooks in your .claude/settings.json (see examples/)"
-echo "  3. Customize hookify rules in .claude/ as needed"

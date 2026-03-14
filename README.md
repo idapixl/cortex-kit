@@ -118,20 +118,6 @@ Skills are invocable workflows that agents can use via `/skill-name`.
 | `cortex-query` | Before evaluation, review, design, or creation work | Best practices for querying cortex — specificity, keyword mode, neighbor exploration, anti-patterns |
 | `cortex-review` | When reviewing code, designs, or proposals | A structured review workflow that grounds feedback in cortex memory, with a standard output format |
 
-### Hookify Rules
-
-The manifest declares hookify rules — declarative hook patterns managed by the [hookify](https://github.com/fozikio/hookify) tool. These are **not** auto-installed by `fozikio init` (hookify needs its own setup). Init prints a reminder:
-
-```
-Recommended hookify rules available. Run `fozikio install-rules` to install.
-```
-
-| Rule | Purpose |
-|------|---------|
-| `cognitive-grounding` | Declarative version of the cognitive-grounding hook |
-| `observe-first` | Declarative version of the observe-first hook |
-| `note-about-doing` | Reminds agents to observe what they're doing as they work |
-
 ### Agents
 
 | Agent | Description |
@@ -143,8 +129,7 @@ Recommended hookify rules available. Run `fozikio install-rules` to install.
 1. `fozikio init` reads `fozikio.json` from the package root
 2. For each hook in `contents.hooks`: copies `hooks/{name}.sh` into `{workspace}/.claude/hooks/`
 3. For each skill in `contents.skills`: copies `skills/{name}/` directory into `{workspace}/.claude/skills/`
-4. If `contents.hookify_rules` is non-empty: prints a message (no interactive prompts)
-5. Missing source files are skipped with a warning — init never fails due to missing assets
+4. Missing source files are skipped with a warning — init never fails due to missing assets
 
 ### Overriding Cortex Hooks
 
