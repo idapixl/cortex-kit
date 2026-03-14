@@ -1,6 +1,6 @@
 # Agent-First Setup Guide
 
-cortex-kit is designed so an AI agent can set up, understand, and extend its own workspace from the first prompt.
+fozikio is designed so an AI agent can set up, understand, and extend its own workspace from the first prompt.
 
 ## Quick Start: 30 Seconds to a Working Agent
 
@@ -13,7 +13,7 @@ Set up a cortex workspace for a research agent using sqlite and ollama
 The agent runs:
 
 ```bash
-npx cortex-kit init my-agent --store sqlite --embed ollama --llm ollama
+npx fozikio init my-agent --store sqlite --embed ollama --llm ollama
 ```
 
 That's it. The agent now has:
@@ -131,9 +131,9 @@ The scaffolded workspace is designed for agents to extend:
 
 ## The Self-Bootstrapping Loop
 
-This is what makes cortex-kit different from a static config generator:
+This is what makes fozikio different from a static config generator:
 
-1. **`cortex-kit init`** creates the workspace
+1. **`fozikio init`** creates the workspace
 2. **Agent reads `CLAUDE.md`** and understands cortex tools
 3. **Agent uses cortex** — queries, observes, builds memory
 4. **Agent can teach the user** about cortex because it understands the system
@@ -144,7 +144,7 @@ The setup *is* the documentation *is* the agent's identity. There's no separate 
 
 ## What Changes for Agent-Driven vs Manual Setup
 
-Nothing structurally. `cortex-kit init` produces identical output whether a human or an agent runs it. The difference is in how the output is consumed:
+Nothing structurally. `fozikio init` produces identical output whether a human or an agent runs it. The difference is in how the output is consumed:
 
 - **Human reads README** to understand the system, then configures manually
 - **Agent reads CLAUDE.md** and is immediately operational, then extends the workspace as the user asks

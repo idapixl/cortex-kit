@@ -36,6 +36,7 @@ export type {
   Edge,
   EdgeRelation,
   Observation,
+  ObservationContentType,
   OpsEntry,
   OpsEntryType,
   OpsStatus,

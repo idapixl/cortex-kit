@@ -15,7 +15,14 @@
 import { loadConfig } from './config-loader.js';
 import { startServer } from '../mcp/server.js';
 
-const config = loadConfig();
+// Parse --agent flag from argv
+let agentName: string | undefined;
+const agentIdx = process.argv.indexOf('--agent');
+if (agentIdx !== -1 && process.argv[agentIdx + 1]) {
+  agentName = process.argv[agentIdx + 1];
+}
+
+const config = loadConfig(undefined, agentName);
 
 startServer(config).catch(err => {
   console.error('[cortex-engine] Fatal error:', err);

@@ -250,7 +250,22 @@ async function createFromUnclustered(
   const createLimit = options.create_limit ?? 10;
   let created = 0;
 
-  const candidates = unclusteredObs.slice(0, createLimit);
+  // Only promote declarative observations to memories.
+  // Interrogative (questions) and speculative (hypotheses) stay as observations —
+  // they shouldn't become knowledge nodes in the memory graph.
+  const declarativeObs = unclusteredObs.filter(
+    obs => !obs.content_type || obs.content_type === 'declarative' || obs.content_type === 'reflective',
+  );
+
+  // Mark non-declarative observations as processed so they don't re-enter the pipeline
+  const nonDeclarativeObs = unclusteredObs.filter(
+    obs => obs.content_type === 'interrogative' || obs.content_type === 'speculative',
+  );
+  for (const obs of nonDeclarativeObs) {
+    try { await store.markObservationProcessed(obs.id); } catch { /* skip */ }
+  }
+
+  const candidates = declarativeObs.slice(0, createLimit);
 
   for (const obs of candidates) {
     try {

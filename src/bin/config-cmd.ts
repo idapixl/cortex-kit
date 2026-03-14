@@ -1,50 +1,21 @@
 /**
- * config-cmd.ts — cortex-kit config command handler.
+ * config-cmd.ts — fozikio config command handler.
  *
  * Usage:
- *   cortex-kit config                     Show current config
- *   cortex-kit config --store sqlite      Set storage backend
- *   cortex-kit config --embed ollama      Set embedding provider
- *   cortex-kit config --llm ollama        Set LLM provider
- *   cortex-kit config --path              Show config file path
+ *   fozikio config                     Show current config
+ *   fozikio config --store sqlite      Set storage backend
+ *   fozikio config --embed ollama      Set embedding provider
+ *   fozikio config --llm ollama        Set LLM provider
+ *   fozikio config --path              Show config file path
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { dirname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { loadConfig } from './config-loader.js';
+import { findConfigPath, defaultConfigPath } from './config-utils.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
 import type { CortexConfig, AgentConfig } from '../core/config.js';
-
-// ─── Config File Discovery ────────────────────────────────────────────────────
-
-/**
- * Find the config file path — mirrors the search order in config-loader.ts.
- * Checks agent.yaml (new format) before config.yaml (legacy format).
- * Returns null if no config file exists (defaults are in use).
- */
-function findConfigPath(cwd: string = process.cwd()): string | null {
-  const searchPaths = [
-    resolve(cwd, '.fozikio', 'agent.yaml'),
-    resolve(cwd, '.fozikio', 'config.yaml'),
-    resolve(cwd, 'cortex.config.yaml'),
-    resolve(cwd, 'config.yaml'),
-  ];
-
-  for (const p of searchPaths) {
-    if (existsSync(p)) return p;
-  }
-
-  return null;
-}
-
-/**
- * Default write location when no config exists yet.
- * Uses agent.yaml (new format).
- */
-function defaultConfigPath(cwd: string = process.cwd()): string {
-  return resolve(cwd, '.fozikio', 'agent.yaml');
-}
 
 // ─── Config Read/Write ────────────────────────────────────────────────────────
 

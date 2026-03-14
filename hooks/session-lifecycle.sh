@@ -8,7 +8,7 @@
 #           fresh without stale data from previous sessions.
 # How:      Truncates .claude/state/cortex-calls.log and push-gate-state.txt.
 # Disable:  Delete this file from .claude/hooks/ — no other config needed.
-# Part of:  cortex-kit — supports cortex-telemetry.sh and project-board-gate.sh.
+# Part of:  fozikio — supports cortex-telemetry.sh and project-board-gate.sh.
 # ============================================================================
 
 STATE_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/state"

@@ -89,7 +89,7 @@ interface ObservationRow {
   id: string; content: string; source_file: string; source_section: string;
   salience: number; processed: number; prediction_error: number | null;
   created_at: string; updated_at: string; embedding: string | null;
-  keywords: string;
+  keywords: string; content_type: string | null;
   prov_model_id: string | null; prov_model_family: string | null;
   prov_client: string | null; prov_agent: string | null;
 }
@@ -164,6 +164,7 @@ function rowToObservation(r: ObservationRow): Observation {
     embedding: r.embedding ? parseJSON<number[]>(r.embedding, []) : null,
     keywords: parseJSON<string[]>(r.keywords, []),
     provenance: prov(r),
+    content_type: (r.content_type as Observation['content_type']) ?? 'declarative',
   };
 }
 
@@ -218,6 +219,7 @@ const SCHEMAS: Record<string, string> = {
     salience REAL NOT NULL DEFAULT 0.5, processed INTEGER NOT NULL DEFAULT 0,
     prediction_error REAL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
     embedding TEXT, keywords TEXT NOT NULL DEFAULT '[]',
+    content_type TEXT DEFAULT 'declarative',
     prov_model_id TEXT, prov_model_family TEXT, prov_client TEXT, prov_agent TEXT
   )`,
   edges: `CREATE TABLE IF NOT EXISTS %T (
@@ -271,6 +273,17 @@ export class SqliteCortexStore implements CortexStore {
   private createTables(): void {
     for (const [name, sql] of Object.entries(SCHEMAS)) {
       this.db.exec(sql.replace('%T', this.t(name)));
+    }
+    this.migrateSchema();
+  }
+
+  /** Add columns introduced after initial schema. Safe to run repeatedly (no-ops on new DBs). */
+  private migrateSchema(): void {
+    const obsTable = this.t('observations');
+    try {
+      this.db.exec(`ALTER TABLE ${obsTable} ADD COLUMN content_type TEXT DEFAULT 'declarative'`);
+    } catch {
+      // Column already exists — expected on new DBs or after first migration
     }
   }
 
@@ -396,10 +409,10 @@ export class SqliteCortexStore implements CortexStore {
     this.db.prepare(`INSERT INTO ${this.t('observations')} (
       id, content, source_file, source_section, salience, processed,
       prediction_error, created_at, updated_at, embedding, keywords,
-      prov_model_id, prov_model_family, prov_client, prov_agent
+      content_type, prov_model_id, prov_model_family, prov_client, prov_agent
     ) VALUES (
       @id, @content, @sf, @ss, @sal, @proc, @pe, @ca, @ua, @emb, @kw,
-      @pmi, @pmf, @pc, @pa
+      @ct, @pmi, @pmf, @pc, @pa
     )`).run({
       id, content: obs.content, sf: obs.source_file, ss: obs.source_section,
       sal: obs.salience, proc: obs.processed ? 1 : 0,
@@ -407,6 +420,7 @@ export class SqliteCortexStore implements CortexStore {
       ca: toISO(obs.created_at), ua: toISO(obs.updated_at),
       emb: obs.embedding ? JSON.stringify(obs.embedding) : null,
       kw: JSON.stringify(obs.keywords ?? []),
+      ct: obs.content_type ?? 'declarative',
       pmi: obs.provenance?.model_id ?? null, pmf: obs.provenance?.model_family ?? null,
       pc: obs.provenance?.client ?? null, pa: obs.provenance?.agent ?? null,
     });

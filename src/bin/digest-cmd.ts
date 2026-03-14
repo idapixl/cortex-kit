@@ -1,13 +1,13 @@
 /**
- * digest-cmd.ts — cortex-kit digest command handler.
+ * digest-cmd.ts — fozikio digest command handler.
  *
  * Usage:
- *   cortex-kit digest <file>                                Process a single file
- *   cortex-kit digest --pending                            Process files with directive: digest
- *   cortex-kit digest --dry-run                            Show what would be processed
- *   cortex-kit digest --pipeline observe,reflect,predict   Custom pipeline
- *   cortex-kit digest --namespace prediction               Target namespace
- *   cortex-kit digest --dir <path>                         Directory to scan for --pending
+ *   fozikio digest <file>                                Process a single file
+ *   fozikio digest --pending                            Process files with directive: digest
+ *   fozikio digest --dry-run                            Show what would be processed
+ *   fozikio digest --pipeline observe,reflect,predict   Custom pipeline
+ *   fozikio digest --namespace prediction               Target namespace
+ *   fozikio digest --dir <path>                         Directory to scan for --pending
  */
 
 import { readFileSync, writeFileSync, readdirSync, statSync, renameSync, mkdirSync, existsSync } from 'node:fs';
@@ -313,12 +313,12 @@ export async function runDigest(args: string[]): Promise<void> {
   if (!parsed.file && !parsed.pending) {
     process.stderr.write(
       'Usage:\n' +
-      '  cortex-kit digest <file>                  Process a single file\n' +
-      '  cortex-kit digest --pending               Process files with directive: digest\n' +
-      '  cortex-kit digest --dry-run               Show what would be processed\n' +
-      '  cortex-kit digest --pipeline <steps>      Custom pipeline (default: observe,reflect)\n' +
-      '  cortex-kit digest --namespace <ns>        Target namespace\n' +
-      '  cortex-kit digest --dir <path>            Directory to scan for --pending\n',
+      '  fozikio digest <file>                  Process a single file\n' +
+      '  fozikio digest --pending               Process files with directive: digest\n' +
+      '  fozikio digest --dry-run               Show what would be processed\n' +
+      '  fozikio digest --pipeline <steps>      Custom pipeline (default: observe,reflect)\n' +
+      '  fozikio digest --namespace <ns>        Target namespace\n' +
+      '  fozikio digest --dir <path>            Directory to scan for --pending\n',
     );
     process.exit(1);
   }

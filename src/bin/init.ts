@@ -1,11 +1,11 @@
 /**
- * init.ts — cortex-kit init command.
+ * init.ts — fozikio init command.
  *
  * Scaffolds a new agent workspace with cortex-engine configuration.
  *
  * Usage:
- *   cortex-kit init <name> [options]
- *   cortex-kit init --here [options]
+ *   fozikio init <name> [options]
+ *   fozikio init --here [options]
  *
  * Options:
  *   --store sqlite|firestore   Storage backend (default: sqlite)
@@ -69,21 +69,21 @@ export function parseInitArgs(args: string[]): InitOptions | null {
     } else if (arg === '--store') {
       const val = args[++i];
       if (val !== 'sqlite' && val !== 'firestore') {
-        console.error(`[cortex-kit] Invalid --store value: ${val}. Must be sqlite or firestore.`);
+        console.error(`[fozikio] Invalid --store value: ${val}. Must be sqlite or firestore.`);
         return null;
       }
       opts.store = val;
     } else if (arg === '--embed') {
       const val = args[++i];
       if (val !== 'ollama' && val !== 'vertex' && val !== 'openai') {
-        console.error(`[cortex-kit] Invalid --embed value: ${val}. Must be ollama, vertex, or openai.`);
+        console.error(`[fozikio] Invalid --embed value: ${val}. Must be ollama, vertex, or openai.`);
         return null;
       }
       opts.embed = val;
     } else if (arg === '--llm') {
       const val = args[++i];
       if (val !== 'ollama' && val !== 'gemini' && val !== 'anthropic' && val !== 'openai') {
-        console.error(`[cortex-kit] Invalid --llm value: ${val}. Must be ollama, gemini, anthropic, or openai.`);
+        console.error(`[fozikio] Invalid --llm value: ${val}. Must be ollama, gemini, anthropic, or openai.`);
         return null;
       }
       opts.llm = val;
@@ -92,7 +92,7 @@ export function parseInitArgs(args: string[]): InitOptions | null {
     } else if (!arg.startsWith('--')) {
       opts.name = arg;
     } else {
-      console.error(`[cortex-kit] Unknown option: ${arg}`);
+      console.error(`[fozikio] Unknown option: ${arg}`);
       return null;
     }
 
@@ -100,9 +100,9 @@ export function parseInitArgs(args: string[]): InitOptions | null {
   }
 
   if (!opts.here && !opts.name) {
-    console.error('[cortex-kit] init requires a name argument or --here flag.');
-    console.error('  Usage: cortex-kit init <name>');
-    console.error('         cortex-kit init --here');
+    console.error('[fozikio] init requires a name argument or --here flag.');
+    console.error('  Usage: fozikio init <name>');
+    console.error('         fozikio init --here');
     return null;
   }
 
@@ -126,6 +126,8 @@ agent:
 identity:
   profile: mind/profile.md
   session_state: state/session-state.md
+
+agents: {}
 
 cortex:
   ${opts.namespace}:
@@ -154,7 +156,7 @@ function buildFozikioReadme(name: string): string {
 
 This directory is the agent workspace manifest for **${name}**.
 
-It is read by cortex-engine and cortex-kit to configure the agent's identity,
+It is read by cortex-engine and fozikio to configure the agent's identity,
 storage backend, embedding provider, and installed components.
 
 ## Files
@@ -235,61 +237,44 @@ const MCP_JSON = `{
 
 const COGNITIVE_TOOLS_REFERENCE = `# Cognitive Tools
 
-This workspace uses cortex-engine for persistent memory and cognition.
+This workspace uses cortex-engine for persistent memory.
 
-## Available Tools
+## Tools
 
-| Tool | What it does |
-|------|-------------|
-| \`observe\` | Record an observation — cortex decides if it's novel, similar, or duplicate |
-| \`query\` | Semantic search across memory with HyDE expansion |
-| \`recall\` | Browse recent observations and memories by time |
-| \`neighbors\` | Explore the memory graph from a specific concept |
-| \`predict\` | Proactive retrieval — what's relevant given current context |
-| \`validate\` | Check a prediction against an outcome (FSRS learning) |
-| \`believe\` | Record a belief change with reason tracking |
-| \`reflect\` | Generate reflective insights connecting observations |
-| \`dream\` | Run consolidation — cluster, refine, create, connect, score, abstract |
-| \`digest\` | Process a document through the ingestion pipeline |
+Read before you write. Tool descriptions tell you the rest.
+
+**Write — record knowledge:**
+| Tool | Purpose |
+|------|---------|
+| \`observe\` | Record a fact — something you learned, confirmed, or noticed to be true |
+| \`wonder\` | Record an open question or curiosity — stored separately from facts |
+| \`speculate\` | Record a hypothesis or untested idea — excluded from default retrieval |
+| \`believe\` | Update what you believe about an existing memory |
+| \`reflect\` | Synthesize what you know about a topic into a grounded reflection |
+| \`digest\` | Ingest a document — extracts facts and generates reflections |
+
+**Read — retrieve knowledge:**
+| Tool | Purpose |
+|------|---------|
+| \`query\` | Search memories by meaning |
+| \`recall\` | List recent observations chronologically |
+| \`predict\` | Anticipate what memories might be relevant next |
+| \`validate\` | Confirm or deny a prediction — strengthens or weakens the memory |
+| \`neighbors\` | Explore memories connected to a specific concept |
+| \`wander\` | Random walk for serendipitous discovery |
+
+**Ops — session tracking:**
+| Tool | Purpose |
+|------|---------|
+| \`ops_append\` | Log a session breadcrumb, milestone, or decision |
+| \`ops_query\` | Search the operational log |
+| \`ops_update\` | Update an ops entry status or content |
+
+**System:**
+| Tool | Purpose |
+|------|---------|
 | \`stats\` | Memory counts and namespace health |
-| \`ops_append\` | Log operational breadcrumbs |
-| \`ops_query\` | Query the operational log |
-| \`ops_update\` | Update an ops entry |
-| \`wander\` | Random graph walk for serendipitous discovery |
-
-## Usage Pattern
-
-Before working on any topic, query cortex first:
-\`\`\`
-query("the topic you're working on")
-\`\`\`
-
-When you learn something interesting:
-\`\`\`
-observe("what you noticed")
-\`\`\`
-
-At session end, run dream to consolidate:
-\`\`\`
-dream()
-\`\`\`
-
-## Installed Hooks
-
-Cortex-kit hooks are installed in \`.claude/hooks/\`. They fire automatically:
-
-- **cognitive-grounding** — reminds you to \`query()\` before evaluation/design/review work
-- **observe-first** — warns before writing to memory directories without \`observe()\`/\`query()\`
-- **cortex-telemetry** — tracks retrieval patterns for quality feedback
-- **session-lifecycle** — resets session state on startup
-- **project-board-gate** — gates \`git push\` on board updates (configure via \`.claude/state/project-boards.json\`)
-
-To disable any hook, delete its \`.sh\` file from \`.claude/hooks/\`.
-
-## Installed Skills
-
-- **/cortex-query** — best practices for querying cortex memory
-- **/cortex-review** — structured review workflow grounded in cortex context
+| \`dream\` | Consolidate observations into long-term memories (run periodically) |
 `;
 
 const OBSIDIAN_APP_JSON = `{
@@ -307,7 +292,7 @@ const OBSIDIAN_APPEARANCE_JSON = `{
 
 // ─── Manifest & Asset Installation ────────────────────────────────────────
 
-/** Resolve the package root (where cortex-kit.json lives). */
+/** Resolve the package root (where fozikio.json lives). */
 function getPackageRoot(): string {
   const thisFile = fileURLToPath(import.meta.url);
   // dist/bin/init.js → package root (two levels up)
@@ -315,16 +300,16 @@ function getPackageRoot(): string {
 }
 
 function loadManifest(packageRoot: string): KitManifest | null {
-  const manifestPath = join(packageRoot, 'cortex-kit.json');
+  const manifestPath = join(packageRoot, 'fozikio.json');
   if (!existsSync(manifestPath)) {
-    console.error('[cortex-kit] Warning: cortex-kit.json not found — skipping hook/skill installation.');
+    console.error('[fozikio] Warning: fozikio.json not found — skipping hook/skill installation.');
     return null;
   }
   try {
     return JSON.parse(readFileSync(manifestPath, 'utf-8')) as KitManifest;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[cortex-kit] Warning: Failed to parse cortex-kit.json: ${msg} — skipping hook/skill installation.`);
+    console.error(`[fozikio] Warning: Failed to parse fozikio.json: ${msg} — skipping hook/skill installation.`);
     return null;
   }
 }
@@ -335,7 +320,7 @@ function installHooks(packageRoot: string, targetDir: string, hooks: string[]): 
   const installed: string[] = [];
 
   if (!existsSync(sourceDir)) {
-    console.error('[cortex-kit] Warning: hooks/ directory not found in package — skipping hook installation.');
+    console.error('[fozikio] Warning: hooks/ directory not found in package — skipping hook installation.');
     return installed;
   }
 
@@ -345,7 +330,7 @@ function installHooks(packageRoot: string, targetDir: string, hooks: string[]): 
     const hookFile = `${hook}.sh`;
     const src = join(sourceDir, hookFile);
     if (!existsSync(src)) {
-      console.error(`[cortex-kit] Warning: hook not found: ${hookFile} — skipping.`);
+      console.error(`[fozikio] Warning: hook not found: ${hookFile} — skipping.`);
       continue;
     }
     const dest = join(destDir, hookFile);
@@ -364,7 +349,7 @@ function installSkills(packageRoot: string, targetDir: string, skills: string[])
   const installed: string[] = [];
 
   if (!existsSync(sourceDir)) {
-    console.error('[cortex-kit] Warning: skills/ directory not found in package — skipping skill installation.');
+    console.error('[fozikio] Warning: skills/ directory not found in package — skipping skill installation.');
     return installed;
   }
 
@@ -373,7 +358,7 @@ function installSkills(packageRoot: string, targetDir: string, skills: string[])
   for (const skill of skills) {
     const src = join(sourceDir, skill);
     if (!existsSync(src)) {
-      console.error(`[cortex-kit] Warning: skill not found: ${skill}/ — skipping.`);
+      console.error(`[fozikio] Warning: skill not found: ${skill}/ — skipping.`);
       continue;
     }
     const dest = join(destDir, skill);
@@ -401,7 +386,7 @@ export function runInit(args: string[]): void {
     : resolve(process.cwd(), opts.name);
 
   if (!opts.here && existsSync(targetDir)) {
-    console.error(`[cortex-kit] Directory already exists: ${targetDir}`);
+    console.error(`[fozikio] Directory already exists: ${targetDir}`);
     console.error('  Use --here to scaffold into the current directory.');
     process.exit(1);
   }
@@ -481,7 +466,7 @@ export function runInit(args: string[]): void {
 
   // Success message
   const relativePath = opts.here ? '.' : opts.name;
-  console.error(`[cortex-kit] Workspace scaffolded at: ${targetDir}`);
+  console.error(`[fozikio] Workspace scaffolded at: ${targetDir}`);
   console.error('');
   console.error('Files created:');
   console.error(`  ${relativePath}/.fozikio/agent.yaml`);
@@ -515,7 +500,7 @@ export function runInit(args: string[]): void {
   }
   if (hasHookifyRules) {
     console.error('');
-    console.error('Recommended hookify rules available. Run `cortex-kit install-rules` to install.');
+    console.error('Recommended hookify rules available. Run `fozikio install-rules` to install.');
   }
   console.error('');
   console.error('Next steps:');

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * cortex-kit CLI — setup and management for cortex-engine agents.
+ * fozikio CLI — setup and management for cortex-engine agents.
  *
  * Commands:
  *   init <name>     Scaffold a new agent workspace
@@ -14,22 +14,32 @@ import { loadConfig } from './config-loader.js';
 import { runInit } from './init.js';
 import { runDigest } from './digest-cmd.js';
 import { runConfig } from './config-cmd.js';
+import { runAgent } from './agent-cmd.js';
 import { startServer } from '../mcp/server.js';
 
 // ─── Help ──────────────────────────────────────────────────────────────────
 
 function printHelp(): void {
-  console.error(`cortex-kit — setup and management for cortex-engine agents
+  console.error(`fozikio — setup and management for cortex-engine agents
 
 Usage:
-  cortex-kit <command> [options]
+  fozikio <command> [options]
 
 Commands:
   init <name>   Scaffold a new agent workspace
   serve          Start the MCP server (stdio)
   config         View or edit configuration
+  agent          Manage multi-agent registry
   digest         Process documents through cortex
   help           Show this help message
+
+Serve options:
+  --agent <name>  Scope server to a named agent's namespace
+
+Agent subcommands:
+  agent add <name>      Register a new agent
+  agent list            List registered agents
+  agent generate-mcp    Write multi-agent .mcp.json
 
 Init options:
   --store sqlite|firestore     Storage backend (default: sqlite)
@@ -40,14 +50,14 @@ Init options:
   --obsidian                   Create .obsidian/ structure
 
 Examples:
-  cortex-kit init my-agent
-  cortex-kit init my-agent --store firestore --embed vertex --llm gemini
-  cortex-kit init --here --obsidian
-  cortex-kit serve
-  cortex-kit config
-  cortex-kit config --store sqlite --embed ollama
-  cortex-kit digest path/to/file.md
-  cortex-kit digest --pending
+  fozikio init my-agent
+  fozikio init my-agent --store firestore --embed vertex --llm gemini
+  fozikio init --here --obsidian
+  fozikio serve
+  fozikio config
+  fozikio config --store sqlite --embed ollama
+  fozikio digest path/to/file.md
+  fozikio digest --pending
 `);
 }
 
@@ -60,26 +70,39 @@ switch (command) {
     runInit(rest);
     break;
 
-  case 'serve':
+  case 'serve': {
+    let agentName: string | undefined;
+    const agentIdx = rest.indexOf('--agent');
+    if (agentIdx !== -1 && rest[agentIdx + 1]) {
+      agentName = rest[agentIdx + 1];
+    }
     (async () => {
-      const config = loadConfig();
+      const config = loadConfig(undefined, agentName);
       await startServer(config);
     })().catch(err => {
-      console.error('[cortex-kit] Fatal error:', err);
+      console.error('[fozikio] Fatal error:', err);
+      process.exit(1);
+    });
+    break;
+  }
+
+  case 'config':
+    runConfig(rest).catch(err => {
+      console.error('[fozikio] Config error:', err);
       process.exit(1);
     });
     break;
 
-  case 'config':
-    runConfig(rest).catch(err => {
-      console.error('[cortex-kit] Config error:', err);
+  case 'agent':
+    runAgent(rest).catch(err => {
+      console.error('[fozikio] Agent error:', err);
       process.exit(1);
     });
     break;
 
   case 'digest':
     runDigest(rest).catch(err => {
-      console.error('[cortex-kit] Digest error:', err);
+      console.error('[fozikio] Digest error:', err);
       process.exit(1);
     });
     break;
@@ -91,13 +114,13 @@ switch (command) {
     break;
 
   case undefined:
-    console.error('[cortex-kit] No command provided.\n');
+    console.error('[fozikio] No command provided.\n');
     printHelp();
     process.exit(1);
     break;
 
   default:
-    console.error(`[cortex-kit] Unknown command: ${command}\n`);
+    console.error(`[fozikio] Unknown command: ${command}\n`);
     printHelp();
     process.exit(1);
 }

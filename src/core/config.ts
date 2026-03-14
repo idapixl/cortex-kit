@@ -126,14 +126,24 @@ export interface CortexConfig {
   };
 }
 
+// ─── Agent Entry (multi-agent registry) ──────────────────────────────────────
+
+export interface AgentEntry {
+  namespace: string;
+  profile?: string;
+  description?: string;
+}
+
 // ─── Agent Config (wraps cortex config) ───────────────────────────────────────
 
 export interface AgentConfig {
   agent?: {
     name: string;
-    type: string;
+    type?: string;
+    version?: string;
     description?: string;
   };
+  agents?: Record<string, AgentEntry>;
   cortex: CortexConfig;
 }
 

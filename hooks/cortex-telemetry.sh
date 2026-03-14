@@ -11,7 +11,7 @@
 #           POSTs a "retry" signal to CORTEX_API_URL/api/v2/retrieval-feedback.
 # Env:      CORTEX_API_URL, CORTEX_API_TOKEN (optional — skips API call if unset)
 # Disable:  Delete this file from .claude/hooks/ — no other config needed.
-# Part of:  cortex-kit — portable, fire-and-forget HTTP calls.
+# Part of:  fozikio — portable, fire-and-forget HTTP calls.
 # ============================================================================
 
 INPUT=$(cat)

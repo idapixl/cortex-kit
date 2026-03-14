@@ -1,13 +1,13 @@
 {
   "name": "cortex-engine",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "cortex-engine": "dist/bin/serve.js",
-    "cortex-kit": "dist/bin/cli.js"
+    "fozikio": "dist/bin/cli.js"
   },
   "scripts": {
     "build": "tsc",

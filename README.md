@@ -42,7 +42,7 @@ Requires Node.js 20 or later.
 
 ### Agent-First Setup
 
-The fastest path: open an AI agent in an empty directory and say *"set up a cortex workspace."* The agent runs `npx cortex-kit init`, reads the generated files, and is immediately productive. See **[docs/agent-first-setup.md](docs/agent-first-setup.md)** for the full guide.
+The fastest path: open an AI agent in an empty directory and say *"set up a cortex workspace."* The agent runs `npx fozikio init`, reads the generated files, and is immediately productive. See **[docs/agent-first-setup.md](docs/agent-first-setup.md)** for the full guide.
 
 ### Development
 
@@ -62,7 +62,7 @@ Additional variables are required depending on which providers you enable (Fires
 
 ## Hooks, Skills & Agents
 
-`cortex-kit init` automatically installs hooks, skills, and agent definitions from the `cortex-kit.json` manifest into the target workspace. These live in `.claude/hooks/` and `.claude/skills/` after init.
+`fozikio init` automatically installs hooks, skills, and agent definitions from the `fozikio.json` manifest into the target workspace. These live in `.claude/hooks/` and `.claude/skills/` after init.
 
 ### Hooks
 
@@ -111,10 +111,10 @@ Skills are invocable workflows that agents can use via `/skill-name`.
 
 ### Hookify Rules
 
-The manifest declares hookify rules — declarative hook patterns managed by the [hookify](https://github.com/fozikio/hookify) tool. These are **not** auto-installed by `cortex-kit init` (hookify needs its own setup). Init prints a reminder:
+The manifest declares hookify rules — declarative hook patterns managed by the [hookify](https://github.com/fozikio/hookify) tool. These are **not** auto-installed by `fozikio init` (hookify needs its own setup). Init prints a reminder:
 
 ```
-Recommended hookify rules available. Run `cortex-kit install-rules` to install.
+Recommended hookify rules available. Run `fozikio install-rules` to install.
 ```
 
 | Rule | Purpose |
@@ -131,7 +131,7 @@ Recommended hookify rules available. Run `cortex-kit install-rules` to install.
 
 ### How Auto-Install Works
 
-1. `cortex-kit init` reads `cortex-kit.json` from the package root
+1. `fozikio init` reads `fozikio.json` from the package root
 2. For each hook in `contents.hooks`: copies `hooks/{name}.sh` into `{workspace}/.claude/hooks/`
 3. For each skill in `contents.skills`: copies `skills/{name}/` directory into `{workspace}/.claude/skills/`
 4. If `contents.hookify_rules` is non-empty: prints a message (no interactive prompts)
@@ -141,8 +141,8 @@ Recommended hookify rules available. Run `cortex-kit install-rules` to install.
 
 To override a hook's behavior without removing it:
 1. Edit the `.sh` file in your workspace's `.claude/hooks/` directly — it's a plain copy, not a symlink
-2. Re-running `cortex-kit init --here` will overwrite your changes (it copies fresh from the package)
-3. To preserve customizations across re-init, rename the hook file (hooks are matched by filename in Claude Code settings, not by the cortex-kit manifest)
+2. Re-running `fozikio init --here` will overwrite your changes (it copies fresh from the package)
+3. To preserve customizations across re-init, rename the hook file (hooks are matched by filename in Claude Code settings, not by the fozikio manifest)
 
 ## Related Projects
 

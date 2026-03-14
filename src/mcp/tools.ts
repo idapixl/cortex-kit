@@ -13,7 +13,7 @@ import type { Session } from '../core/session.js';
 import type { NamespaceManager } from '../namespace/manager.js';
 import type { TriggerRegistry } from '../triggers/registry.js';
 import type { BridgeRegistry } from '../bridges/registry.js';
-import type { OpsEntryType, OpsStatus } from '../core/types.js';
+import type { OpsEntryType, OpsStatus, QueryFilter } from '../core/types.js';
 import { executeIngestionPipeline } from '../triggers/pipeline.js';
 import { checkBridges } from '../bridges/bridge.js';
 import {
@@ -144,14 +144,14 @@ async function fireTriggers(
 
 const queryTool: ToolDefinition = {
   name: 'query',
-  description: 'Semantic search through memories. Optionally uses HyDE expansion for better concept-level recall and spreading activation for graph-enriched results.',
+  description: 'Search your memories by meaning. Returns the most relevant stored knowledge for a given topic or question. Use before writing new observations to avoid duplicates.',
   inputSchema: {
     type: 'object',
     properties: {
-      text: { type: 'string', description: 'The query text to search for' },
-      namespace: { type: 'string', description: 'Namespace to search in (defaults to default namespace)' },
-      limit: { type: 'number', description: 'Max results to return (default: 5)' },
-      hyde: { type: 'boolean', description: 'Use HyDE query expansion (default: true)' },
+      text: { type: 'string', description: 'What to search for — a topic, question, or concept' },
+      namespace: { type: 'string', description: 'Memory namespace to search (defaults to default)' },
+      limit: { type: 'number', description: 'Max results (default: 5)' },
+      hyde: { type: 'boolean', description: 'Expand query for better conceptual matches (default: true)' },
     },
     required: ['text'],
   },
@@ -225,11 +225,11 @@ const queryTool: ToolDefinition = {
 
 const observeTool: ToolDefinition = {
   name: 'observe',
-  description: 'Record an observation with prediction error gating. Observations are compared to existing memories — too-similar content is merged, moderately similar is linked, novel content is stored as new.',
+  description: 'Record a factual observation — something you learned, confirmed, or noticed to be true. Content should be declarative (statements of fact), not questions or speculation. For open questions use wonder(). For untested hypotheses use speculate(). Duplicate observations are automatically merged.',
   inputSchema: {
     type: 'object',
     properties: {
-      text: { type: 'string', description: 'The observation to record' },
+      text: { type: 'string', description: 'A declarative statement of what you observed (e.g. "The auth system uses JWT tokens")' },
       namespace: { type: 'string', description: 'Target namespace (defaults to default namespace)' },
       salience: { type: 'number', description: 'Importance score 1-10 (default: 5)' },
       source_file: { type: 'string', description: 'Source file path for provenance' },
@@ -294,41 +294,157 @@ const observeTool: ToolDefinition = {
   },
 };
 
+const wonderTool: ToolDefinition = {
+  name: 'wonder',
+  description: 'Record an open question or curiosity — something you want to explore but haven\'t resolved. Stored separately from factual observations so questions don\'t pollute knowledge retrieval. Use observe() for facts, wonder() for questions, speculate() for hypotheses.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      text: { type: 'string', description: 'The question or curiosity (e.g. "Why does the sync daemon stall after 300k seconds?")' },
+      namespace: { type: 'string', description: 'Target namespace (defaults to default)' },
+      salience: { type: 'number', description: 'Importance score 1-10 (default: 5)' },
+      context: { type: 'string', description: 'What prompted this question' },
+    },
+    required: ['text'],
+  },
+  async handler(args, ctx) {
+    const text = str(args, 'text');
+    const namespace = optStr(args, 'namespace');
+    const salience = optNum(args, 'salience', 5);
+    const contextText = optStr(args, 'context') ?? '';
+
+    const store: CortexStore = ctx.namespaces.getStore(namespace);
+    const provenance = ctx.session.getProvenance();
+    const embedding = await ctx.embed.embed(text);
+    const keywords = extractKeywords(text);
+
+    const id = await store.putObservation({
+      content: text,
+      source_file: contextText,
+      source_section: 'wonder',
+      salience,
+      processed: false,
+      prediction_error: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+      embedding,
+      keywords,
+      provenance,
+      content_type: 'interrogative',
+    });
+
+    const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
+    await fireTriggers(ctx, resolvedNs, 'wonder', text, { observation_id: id }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'wonder', { id, namespace: resolvedNs }, ctx.allTools);
+
+    return {
+      id,
+      content_type: 'interrogative',
+      namespace: resolvedNs,
+      keywords,
+      salience,
+    };
+  },
+};
+
+const speculateTool: ToolDefinition = {
+  name: 'speculate',
+  description: 'Record a hypothesis or untested idea — something that might be true but hasn\'t been confirmed. Stored with a speculative flag so it\'s excluded from default query results. Use observe() for confirmed facts, wonder() for questions, speculate() for "what if" ideas.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      text: { type: 'string', description: 'The hypothesis (e.g. "Switching to sessions might reduce token overhead")' },
+      namespace: { type: 'string', description: 'Target namespace (defaults to default)' },
+      salience: { type: 'number', description: 'Importance score 1-10 (default: 5)' },
+      basis: { type: 'string', description: 'What evidence or reasoning supports this hypothesis' },
+    },
+    required: ['text'],
+  },
+  async handler(args, ctx) {
+    const text = str(args, 'text');
+    const namespace = optStr(args, 'namespace');
+    const salience = optNum(args, 'salience', 5);
+    const basis = optStr(args, 'basis') ?? '';
+
+    const store: CortexStore = ctx.namespaces.getStore(namespace);
+    const provenance = ctx.session.getProvenance();
+    const embedding = await ctx.embed.embed(text);
+    const keywords = extractKeywords(text);
+
+    const id = await store.putObservation({
+      content: text,
+      source_file: basis,
+      source_section: 'speculate',
+      salience,
+      processed: false,
+      prediction_error: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+      embedding,
+      keywords,
+      provenance,
+      content_type: 'speculative',
+    });
+
+    const resolvedNs = namespace ?? ctx.namespaces.getDefaultNamespace();
+    await fireTriggers(ctx, resolvedNs, 'speculate', text, { observation_id: id }, ctx.allTools);
+    await fireBridges(ctx, resolvedNs, 'speculate', { id, namespace: resolvedNs }, ctx.allTools);
+
+    return {
+      id,
+      content_type: 'speculative',
+      namespace: resolvedNs,
+      keywords,
+      salience,
+    };
+  },
+};
+
 const recallTool: ToolDefinition = {
   name: 'recall',
-  description: 'Retrieve recent observations chronologically. Useful for reviewing what has been observed recently.',
+  description: 'List recent observations in chronological order. Use query() to search by meaning, recall() to see what was recorded lately. Filter by content_type to see only facts, questions, or hypotheses.',
   inputSchema: {
     type: 'object',
     properties: {
       namespace: { type: 'string', description: 'Namespace to query (defaults to default namespace)' },
       limit: { type: 'number', description: 'Max entries to return (default: 10)' },
       days: { type: 'number', description: 'How many days back to look (default: 7)' },
+      content_type: { type: 'string', enum: ['declarative', 'interrogative', 'speculative', 'reflective'], description: 'Filter by content type. Omit to see all types.' },
     },
   },
   async handler(args, ctx) {
     const namespace = optStr(args, 'namespace');
     const limit = optNum(args, 'limit', 10);
     const days = optNum(args, 'days', 7);
+    const contentType = optStr(args, 'content_type');
 
     const store: CortexStore = ctx.namespaces.getStore(namespace);
 
     // Query observations ordered by created_at desc within the time window
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const filters: QueryFilter[] = [
+      { field: 'created_at', op: '>=', value: cutoff },
+    ];
+    if (contentType) {
+      filters.push({ field: 'content_type', op: '==', value: contentType });
+    }
     const observations = await store.query(
       'observations',
-      [{ field: 'created_at', op: '>=', value: cutoff }],
+      filters,
       { limit, orderBy: 'created_at', orderDir: 'desc' },
     );
 
     return {
       namespace: namespace ?? ctx.namespaces.getDefaultNamespace(),
       days,
+      content_type_filter: contentType ?? 'all',
       count: observations.length,
       observations: observations.map(o => ({
         id: o['id'],
         content: o['content'],
         salience: o['salience'],
         keywords: o['keywords'],
+        content_type: o['content_type'] ?? 'declarative',
         source_file: o['source_file'],
         created_at: o['created_at'],
         processed: o['processed'],
@@ -340,7 +456,7 @@ const recallTool: ToolDefinition = {
 
 const neighborsTool: ToolDefinition = {
   name: 'neighbors',
-  description: 'Explore the memory graph starting from a specific memory node. Returns the neighborhood of connected memories.',
+  description: 'Explore memories connected to a specific memory. Shows related concepts linked by edges in the knowledge graph. Use after query() to explore around a result.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -411,7 +527,7 @@ const neighborsTool: ToolDefinition = {
 
 const statsTool: ToolDefinition = {
   name: 'stats',
-  description: 'Get cortex statistics — memory counts, namespace info, and operational health.',
+  description: 'Get memory statistics — total memories, unprocessed observations, namespace info, and active tools.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -444,7 +560,7 @@ const statsTool: ToolDefinition = {
 
 const opsAppendTool: ToolDefinition = {
   name: 'ops_append',
-  description: 'Log an operational entry. Used for session breadcrumbs, project milestones, decisions, and handoffs.',
+  description: 'Log an operational breadcrumb — session notes, project milestones, decisions, or handoffs. Entries auto-expire after 30 days. Use the project parameter to group entries across sessions.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -493,7 +609,7 @@ const opsAppendTool: ToolDefinition = {
 
 const opsQueryTool: ToolDefinition = {
   name: 'ops_query',
-  description: 'Query the operational log with composable filters. Useful for reviewing session history and project progress.',
+  description: 'Search the operational log. Filter by project, entry type, status, or time window. Use to review what happened in previous sessions or check project progress.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -535,7 +651,7 @@ const opsQueryTool: ToolDefinition = {
 
 const opsUpdateTool: ToolDefinition = {
   name: 'ops_update',
-  description: 'Update an operational log entry (e.g., mark as done, amend content).',
+  description: 'Update an operational log entry — change its status (active/done/stale) or amend its content.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -575,7 +691,7 @@ const opsUpdateTool: ToolDefinition = {
 
 const predictTool: ToolDefinition = {
   name: 'predict',
-  description: 'Proactive retrieval based on current context. Uses HyDE to expand the context and returns predictions with confidence scores.',
+  description: 'Anticipate what memories might be relevant given your current context. Unlike query() which answers a specific question, predict() surfaces knowledge you might need next. Returns results with confidence scores based on relevance and memory strength.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -621,7 +737,7 @@ const predictTool: ToolDefinition = {
 
 const validateTool: ToolDefinition = {
   name: 'validate',
-  description: 'Check a prediction against an actual outcome. Updates FSRS scheduling for the referenced memory.',
+  description: 'Confirm or deny a prediction. Correct predictions strengthen the memory (longer retention), incorrect ones weaken it (more frequent review). Use after predict() to close the feedback loop.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -682,7 +798,7 @@ const validateTool: ToolDefinition = {
 
 const believeTool: ToolDefinition = {
   name: 'believe',
-  description: 'Record a belief change on a memory concept. Logs the old definition, updates the memory, and stores the change in belief history.',
+  description: 'Update what you believe about an existing memory. Logs the previous definition, records why the belief changed, and updates the memory. Use when your understanding of a concept has changed — not for new observations.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -747,7 +863,7 @@ const believeTool: ToolDefinition = {
 
 const reflectTool: ToolDefinition = {
   name: 'reflect',
-  description: 'Generate a reflective passage about a topic by querying related memories and synthesizing them with the LLM. Stores the reflection as an observation.',
+  description: 'Synthesize what you know about a topic into a short reflective passage. Pulls related memories and generates a grounded reflection. The result is stored as a new observation for future retrieval.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -812,7 +928,7 @@ const reflectTool: ToolDefinition = {
 
 const wanderTool: ToolDefinition = {
   name: 'wander',
-  description: 'Random walk through the memory graph. Picks a random memory and follows random edges, returning the traversal path. Useful for serendipitous discovery.',
+  description: 'Take a random walk through your memories. Hops between connected concepts for serendipitous discovery. Use when you want inspiration or to explore what you know without a specific question.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -874,7 +990,7 @@ const wanderTool: ToolDefinition = {
 
 const dreamTool: ToolDefinition = {
   name: 'dream',
-  description: 'Run the full 7-phase dream consolidation cycle: cluster observations into existing memories, refine definitions, create new memories from unclustered observations, discover edges between recently active concepts, passive FSRS review, cross-domain abstraction (REM), and a narrative report.',
+  description: 'Run the memory consolidation cycle — a 7-phase process that turns observations into long-term memories. Phase 1: cluster observations to existing memories. Phase 2: refine memory definitions. Phase 3: create new memories from unclustered observations. Phase 4: discover connections between active memories. Phase 5: FSRS spaced-repetition review. Phase 6: cross-domain pattern synthesis. Phase 7: narrative summary. This is a heavyweight operation — run periodically (not every session), typically during maintenance or cron.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -907,7 +1023,7 @@ const dreamTool: ToolDefinition = {
 
 const digestTool: ToolDefinition = {
   name: 'digest',
-  description: 'Process a document through cortex — extract knowledge via observe, generate insights via reflect. Use for batch ingestion of files, plans, creative writing, or any content cortex should learn from.',
+  description: 'Ingest a document — extracts facts as observations and generates reflections. Use for batch learning from files, plans, articles, or any content worth remembering.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -961,11 +1077,13 @@ const digestTool: ToolDefinition = {
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-/** All 15 cognitive tool definitions. */
+/** All 17 cognitive tool definitions. */
 export function createTools(): ToolDefinition[] {
   return [
     queryTool,
     observeTool,
+    wonderTool,
+    speculateTool,
     recallTool,
     neighborsTool,
     statsTool,
@@ -986,6 +1104,8 @@ export function createTools(): ToolDefinition[] {
 export const CORE_TOOLS = [
   'query',
   'observe',
+  'wonder',
+  'speculate',
   'recall',
   'neighbors',
   'stats',

@@ -155,6 +155,7 @@ function docToObservation(id: string, data: DocumentData): Observation {
     embedding: data.embedding ? fromVector(data.embedding) : null,
     keywords: data.keywords ?? [],
     provenance: docProvenance(data),
+    content_type: data.content_type ?? 'declarative',
   };
 }
 
@@ -380,6 +381,7 @@ export class FirestoreCortexStore implements CortexStore {
       updated_at: toTimestamp(obs.updated_at),
       embedding: obs.embedding?.length ? toVector(obs.embedding) : null,
       keywords: obs.keywords ?? [],
+      content_type: obs.content_type ?? 'declarative',
       provenance: provenanceData(obs.provenance) ?? null,
     });
     return ref.id;

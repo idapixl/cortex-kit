@@ -87,6 +87,8 @@ export interface Edge {
 
 // ─── Observation ──────────────────────────────────────────────────────────────
 
+export type ObservationContentType = 'declarative' | 'interrogative' | 'speculative' | 'reflective';
+
 export interface Observation {
   id: string;
   content: string;
@@ -100,6 +102,8 @@ export interface Observation {
   embedding: number[] | null;
   keywords: string[];
   provenance?: ModelProvenance;
+  /** Content type for filtering — declarative (facts), interrogative (questions), speculative (hypotheses), reflective (synthesis). Defaults to 'declarative'. */
+  content_type?: ObservationContentType;
 }
 
 // ─── Ops ──────────────────────────────────────────────────────────────────────

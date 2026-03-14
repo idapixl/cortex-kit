@@ -6,7 +6,7 @@ status: active
 
 # Cortex Document Frontmatter Specification
 
-The cortex document frontmatter is a YAML contract that makes any markdown file cortex-aware. It works identically across Obsidian (Meta Bind controls), the Fozikio dashboard (web UI), CLI (`cortex-kit digest`), file watchers, and custom integrations.
+The cortex document frontmatter is a YAML contract that makes any markdown file cortex-aware. It works identically across Obsidian (Meta Bind controls), the Fozikio dashboard (web UI), CLI (`fozikio digest`), file watchers, and custom integrations.
 
 ## Required Fields
 
@@ -86,16 +86,16 @@ Content view lists all cortex-aware files with lifecycle state. Bulk actions: "D
 
 ### CLI
 ```bash
-cortex-kit digest path/to/file.md              # Digest one file
-cortex-kit digest --pending                     # Digest all with directive: digest
-cortex-kit digest --pending --dry-run           # Show what would be processed
-cortex-kit forget path/to/file.md              # Mark forgotten, apply post_digest
-cortex-kit status                               # Show undigested file count
+fozikio digest path/to/file.md              # Digest one file
+fozikio digest --pending                     # Digest all with directive: digest
+fozikio digest --pending --dry-run           # Show what would be processed
+fozikio forget path/to/file.md              # Mark forgotten, apply post_digest
+fozikio status                               # Show undigested file count
 ```
 
 ### File Watcher
 ```bash
-cortex-kit watch [path]                        # Background daemon
+fozikio watch [path]                        # Background daemon
 ```
 Monitors YAML frontmatter changes. When `directive` changes to `digest`, queues processing. Configurable in `.fozikio/config.yaml`:
 
@@ -129,7 +129,7 @@ Response:
 
 ## Extending the Type System
 
-The `type` enum is intentionally open. cortex-kit users can add custom types in their config:
+The `type` enum is intentionally open. fozikio users can add custom types in their config:
 
 ```yaml
 digest:
