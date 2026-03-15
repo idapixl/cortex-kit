@@ -1,6 +1,6 @@
 {
   "name": "cortex-engine",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
