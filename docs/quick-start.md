@@ -70,7 +70,7 @@ Edit `.fozikio/agent.yaml` to change:
 | Setting | Options | Default |
 |---------|---------|---------|
 | Storage | `sqlite`, `firestore` | `sqlite` |
-| Embeddings | `ollama`, `vertex`, `openai` | `ollama` |
+| Embeddings | `built-in`, `ollama`, `vertex`, `openai` | `built-in` |
 | LLM | `ollama`, `gemini`, `anthropic`, `openai` | `ollama` |
 
 ```bash
@@ -79,12 +79,13 @@ npx fozikio config --store sqlite --embed ollama --llm ollama
 
 ## Local defaults
 
-Out of the box, cortex-engine uses **SQLite** (local file) and **Ollama** (local models). No cloud accounts needed.
+Out of the box, cortex-engine uses **SQLite** (local file) and **built-in** embeddings (no external model needed). No cloud accounts required.
 
-To use Ollama, install it from [ollama.com](https://ollama.com) and pull an embedding model:
+To use Ollama instead, install it from [ollama.com](https://ollama.com), pull an embedding model, and set `--embed ollama`:
 
 ```bash
 ollama pull nomic-embed-text
+npx fozikio config --embed ollama
 ```
 
 ## Next steps

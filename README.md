@@ -65,7 +65,7 @@ npm run test:watch
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `CORTEX_API_TOKEN` | Yes | Authentication token for the HTTP API |
+| `CORTEX_API_TOKEN` | Optional | Used by the `cortex-telemetry` hook to send retrieval feedback to the cortex API. Not required to run the MCP server. |
 
 Additional variables are required depending on which providers you enable (Firestore, Vertex AI, OpenAI, etc.). See `docs/` for provider-specific configuration.
 

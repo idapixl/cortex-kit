@@ -4,6 +4,8 @@ type: spec
 status: draft
 ---
 
+> **Status: Not yet implemented.** This is a design document for a planned `fozikio watch` command. The feature does not exist yet. Use `fozikio digest <file>` for manual invocation.
+
 # Digest File Watcher — Design Brief
 
 ## Problem
