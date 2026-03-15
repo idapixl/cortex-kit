@@ -8,7 +8,7 @@
 
 ## During Work
 
-1. Before any design/review: `query()` fires automatically via hookify rule
+1. Before any design/review: `query()` fires automatically via reflex rule
 2. Interesting observations captured: `observe("noticed X pattern")`
 3. Telemetry hook tracks which cortex tools are being called
 
