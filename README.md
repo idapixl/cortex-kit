@@ -1,18 +1,21 @@
 # cortex-engine
 
-Cognitive engine for AI agents — semantic memory, observations, embeddings, dream consolidation. Cloud Run service + MCP tools.
+Persistent memory for AI agents. Open source, LLM-agnostic, works with any MCP client.
 
 ## What It Does
 
-`cortex-engine` is a portable TypeScript service that gives AI agents persistent, structured memory. It handles:
+Most AI agents forget everything when the session ends. `cortex-engine` fixes that — it gives agents a persistent memory layer that survives across sessions, models, and runtimes.
 
-- **Semantic memory graph** — store and retrieve observations as interconnected nodes
-- **Embeddings** — vector representations via pluggable providers (OpenAI, Vertex AI, Anthropic)
-- **Dream consolidation** — background process that reinforces and connects memories over time
-- **FSRS scheduling** — spaced-repetition scheduling for memory retention
-- **MCP server** — exposes cognitive tools (`query`, `observe`, `believe`, `wander`, etc.) over the Model Context Protocol
+- **Semantic memory** — store and retrieve observations, beliefs, questions, and hypotheses as interconnected nodes
+- **Belief tracking** — agents hold positions that update when new evidence contradicts them
+- **Dream consolidation** — batches of short-term observations compress into durable long-term memories (like biological sleep consolidation)
+- **Spaced repetition (FSRS)** — memories that aren't accessed fade over time, keeping retrieval relevant
+- **Embeddings** — pluggable providers (built-in, OpenAI, Vertex AI, Ollama) — no external service required by default
+- **MCP server** — 17 cognitive tools (`query`, `observe`, `believe`, `wander`, `dream`, etc.) over the Model Context Protocol
 
-Runs as a standalone Cloud Run service or embedded in any Node.js environment.
+The result: personality and expertise emerge from accumulated experience, not system prompts. An agent with 200 observations about distributed systems doesn't need to be told "you care about distributed systems." It just knows.
+
+Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs locally (SQLite) or in the cloud (Firestore + Cloud Run).
 
 ## Architecture
 
@@ -69,45 +72,25 @@ npm run test:watch
 
 Additional variables are required depending on which providers you enable (Firestore, Vertex AI, OpenAI, etc.). See `docs/` for provider-specific configuration.
 
-## Hooks, Skills & Agents
+## Rules, Skills & Agents
 
-`fozikio init` automatically installs hooks, skills, and agent definitions from the `fozikio.json` manifest into the target workspace. These live in `.claude/hooks/` and `.claude/skills/` after init.
+`fozikio init` automatically installs safety rules, skills, and agent definitions from the `fozikio.json` manifest into the target workspace.
 
-### Hooks
+### Safety Rules (Reflex)
 
-Hooks are shell scripts that integrate into Claude Code's event system. They fire automatically — no agent action required.
+cortex-engine ships with [Reflex](https://github.com/Fozikio/reflex) rules — portable YAML-based guardrails that work across any agent runtime, not just Claude Code.
 
-| Hook | Event | What It Does | Requires |
-|------|-------|-------------|----------|
-| `cognitive-grounding.sh` | `UserPromptSubmit` | Nudges the agent to call `query()` before evaluation, design, review, or creation work | — |
-| `observe-first.sh` | `PreToolUse` (Write/Edit) | Warns if writing to Mind/, Journal/, or memory/ without calling `observe()` or `query()` first | — |
-| `cortex-telemetry.sh` | `PostToolUse` | Tracks cortex retrieval calls and detects retries (2 calls within 60s), sends feedback to the cortex API | `CORTEX_API_URL`, `CORTEX_API_TOKEN` (optional) |
-| `session-lifecycle.sh` | `SessionStart` | Resets session-scoped state files (telemetry log, push-gate state) | — |
-| `project-board-gate.sh` | `PreToolUse` (Bash) | Blocks `git push` to tracked repos until board updates and/or ops logging are done | `.claude/state/project-boards.json` config |
+| Rule | Event | What It Does |
+|------|-------|-------------|
+| `cognitive-grounding` | `prompt_submit` | Nudges the agent to call `query()` before evaluation, design, review, or creation work |
+| `observe-first` | `file_write` / `file_edit` | Warns if writing to memory directories without calling `observe()` or `query()` first |
+| `note-about-doing` | `prompt_submit` | Suggests capturing new threads of thought with `thread_create()` |
 
-**To disable a hook:** Delete the `.sh` file from `.claude/hooks/`. No other config changes needed.
+Rules live in `reflex-rules/` as standard Reflex YAML. They're portable — use them with Claude Code, Cursor, Codex, or any runtime with a Reflex adapter. See [@fozikio/reflex](https://github.com/Fozikio/reflex) for the full rule format and tier enforcement.
 
-**To customize project-board-gate:** Create `.claude/state/project-boards.json` with your repos and requirements:
+**Claude Code users** also get platform-specific hooks (in `hooks/`) for telemetry, session lifecycle, and project board gating. These are runtime adapters, not rules — they handle side effects that the declarative rule format doesn't cover.
 
-```json
-{
-  "enabled": true,
-  "strength": "block",
-  "on_push": {
-    "require_board_update": true,
-    "require_ops_log": false
-  },
-  "repos": {
-    "my-repo": {
-      "board_number": 5,
-      "board_owner": "my-org",
-      "description": "My project"
-    }
-  }
-}
-```
-
-Set `"strength": "off"` to disable the gate without removing the hook.
+**To customize:** Edit the YAML rule files directly, or set `allow_disable: true` and disable them via Reflex config.
 
 ### Skills
 
@@ -127,20 +110,32 @@ Skills are invocable workflows that agents can use via `/skill-name`.
 ### How Auto-Install Works
 
 1. `fozikio init` reads `fozikio.json` from the package root
-2. For each hook in `contents.hooks`: copies `hooks/{name}.sh` into `{workspace}/.claude/hooks/`
-3. For each skill in `contents.skills`: copies `skills/{name}/` directory into `{workspace}/.claude/skills/`
-4. Missing source files are skipped with a warning — init never fails due to missing assets
+2. Copies hooks, skills, and Reflex rules into the target workspace
+3. Missing source files are skipped with a warning — init never fails due to missing assets
 
-### Overriding Cortex Hooks
+## Plugin Ecosystem
 
-To override a hook's behavior without removing it:
-1. Edit the `.sh` file in your workspace's `.claude/hooks/` directly — it's a plain copy, not a symlink
-2. Re-running `fozikio init --here` will overwrite your changes (it copies fresh from the package)
-3. To preserve customizations across re-init, rename the hook file (hooks are matched by filename in Claude Code settings, not by the fozikio manifest)
+cortex-engine ships with 17 cognitive tools out of the box. Plugins add more:
+
+| Plugin | What It Adds |
+|--------|-------------|
+| [@fozikio/tools-threads](https://github.com/Fozikio/tools-threads) | Thought threads — create, update, resolve ongoing lines of thinking |
+| [@fozikio/tools-journal](https://github.com/Fozikio/tools-journal) | Session journaling — structured reflections that persist |
+| [@fozikio/tools-content](https://github.com/Fozikio/tools-content) | Content pipeline — draft, review, publish workflow |
+| [@fozikio/tools-evolution](https://github.com/Fozikio/tools-evolution) | Identity evolution — track how the agent's personality changes over time |
+| [@fozikio/tools-social](https://github.com/Fozikio/tools-social) | Social cognition — interaction patterns, engagement tracking |
+| [@fozikio/tools-graph](https://github.com/Fozikio/tools-graph) | Graph analysis — memory connections, clustering, visualization data |
+| [@fozikio/tools-maintenance](https://github.com/Fozikio/tools-maintenance) | Memory maintenance — cleanup, deduplication, health checks |
+| [@fozikio/tools-vitals](https://github.com/Fozikio/tools-vitals) | Vitals tracking — agent health metrics and operational signals |
+| [@fozikio/tools-reasoning](https://github.com/Fozikio/tools-reasoning) | Cognitive reasoning — abstraction, contradiction detection, surfacing |
+
+Install any plugin: `npm install @fozikio/tools-threads` — cortex-engine auto-discovers and loads installed plugins.
 
 ## Related Projects
 
-Reflex Hooks: https://github.com/Fozikio/reflex
+- [@fozikio/reflex](https://github.com/Fozikio/reflex) — Portable safety guardrails for agents. Rules as data, not code.
+- [sigil](https://github.com/Fozikio/sigil) — Agent control surface. Signals and gestures, not conversations.
+- [fozikio.com](https://www.fozikio.com) — Documentation and guides.
 
 ## License
 

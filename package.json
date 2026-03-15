@@ -80,9 +80,17 @@
     "type": "git",
     "url": "https://github.com/Fozikio/cortex-engine.git"
   },
-  "homepage": "https://github.com/Fozikio/cortex-engine#readme",
+  "homepage": "https://fozikio.com",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Fozikio"
+  },
   "files": [
     "dist",
+    "hooks",
+    "skills",
+    "reflex-rules",
+    "fozikio.json",
     "LICENSE",
     "README.md"
   ],

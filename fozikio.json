@@ -1,13 +1,13 @@
 {
   "name": "cortex-engine",
-  "version": "0.4.0",
-  "description": "Portable agent infrastructure for cortex-powered AI agents",
+  "version": "0.4.1",
+  "description": "Portable cognitive engine for AI agents — semantic memory, embeddings, dream consolidation, MCP server",
   "requires": {
-    "cortex_api": ">=0.3.0",
-    "claude_code": ">=1.0.0"
+    "cortex_api": ">=0.3.0"
   },
   "contents": {
     "hooks": ["cognitive-grounding", "observe-first", "cortex-telemetry", "session-lifecycle", "project-board-gate"],
+    "reflex_rules": ["cognitive-grounding", "observe-first", "note-about-doing"],
     "skills": ["cortex-query", "cortex-review"],
     "agents": ["cortex-researcher"]
   }

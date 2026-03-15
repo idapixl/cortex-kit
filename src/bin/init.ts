@@ -25,7 +25,8 @@ import { fileURLToPath } from 'node:url';
 interface KitManifest {
   contents?: {
     hooks?: string[];
-    hookify_rules?: string[];
+    reflex_rules?: string[];
+    hookify_rules?: string[];  // legacy compat
     skills?: string[];
     agents?: string[];
   };
@@ -452,7 +453,7 @@ export function runInit(args: string[]): void {
   const manifest = loadManifest(packageRoot);
   const installedHooks: string[] = [];
   const installedSkills: string[] = [];
-  let hasHookifyRules = false;
+  let hasReflexRules = false;
 
   if (manifest?.contents) {
     if (manifest.contents.hooks && manifest.contents.hooks.length > 0) {
@@ -461,7 +462,7 @@ export function runInit(args: string[]): void {
     if (manifest.contents.skills && manifest.contents.skills.length > 0) {
       installedSkills.push(...installSkills(packageRoot, targetDir, manifest.contents.skills));
     }
-    hasHookifyRules = (manifest.contents.hookify_rules ?? []).length > 0;
+    hasReflexRules = (manifest.contents.reflex_rules ?? manifest.contents.hookify_rules ?? []).length > 0;
   }
 
   // Success message
@@ -498,9 +499,10 @@ export function runInit(args: string[]): void {
       console.error(`  ${relativePath}/.claude/skills/${skill}/`);
     }
   }
-  if (hasHookifyRules) {
+  if (hasReflexRules) {
     console.error('');
-    console.error('Recommended hookify rules available. Run `fozikio install-rules` to install.');
+    console.error('Reflex safety rules available. Run `fozikio install-rules` to install.');
+    console.error('  See: https://github.com/Fozikio/reflex');
   }
   console.error('');
   console.error('Next steps:');

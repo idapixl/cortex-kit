@@ -1,0 +1,17 @@
+name: note-about-doing
+version: 1
+tier: custom
+category: cognitive
+description: Suggest capturing new threads of thought with thread_create()
+events: [prompt_submit]
+conditions:
+  - field: user_prompt
+    op: regex
+    pattern: '(?i)(I should|I need to|I want to|let me|I''ll)'
+action: log
+severity: info
+message: |
+  If this is a new thread of thought, consider capturing it with thread_create() rather than just noting it and moving on.
+override:
+  allow_disable: true
+  allow_downgrade: true

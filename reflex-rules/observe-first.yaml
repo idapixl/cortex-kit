@@ -1,0 +1,17 @@
+name: observe-first
+version: 1
+tier: recommended
+category: cognitive
+description: Warn when writing to memory directories without querying cortex first
+events: [file_write, file_edit]
+conditions:
+  - field: file_path
+    op: regex
+    pattern: '(Mind|Journal|memory)'
+action: warn
+severity: medium
+message: |
+  Writing to a memory directory. Have you called observe() or query() first? Memory writes should be grounded in cortex context.
+override:
+  allow_disable: true
+  allow_downgrade: true

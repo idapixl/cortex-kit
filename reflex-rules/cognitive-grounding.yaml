@@ -1,0 +1,17 @@
+name: cognitive-grounding
+version: 1
+tier: recommended
+category: cognitive
+description: Nudge agent to query cortex before substantive cognitive work
+events: [prompt_submit]
+conditions:
+  - field: user_prompt
+    op: regex
+    pattern: '(?i)(evaluat|review|design|assess|analyz|creat|build|architect|plan|propos|critique|audit|diagnos)'
+action: warn
+severity: medium
+message: |
+  This prompt involves substantive cognitive work. Before responding, call query() on the topic to ground your work in accumulated experience.
+override:
+  allow_disable: true
+  allow_downgrade: true
