@@ -136,6 +136,7 @@ Install any plugin: `npm install @fozikio/tools-threads` — cortex-engine auto-
 - [@fozikio/reflex](https://github.com/Fozikio/reflex) — Portable safety guardrails for agents. Rules as data, not code.
 - [sigil](https://github.com/Fozikio/sigil) — Agent control surface. Signals and gestures, not conversations.
 - [fozikio.com](https://www.fozikio.com) — Documentation and guides.
+- [reddit.com](https://www.reddit.com/r/Fozikio/) — Connect
 
 ## License
 
