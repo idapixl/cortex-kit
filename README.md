@@ -116,6 +116,7 @@ Skills are invocable workflows that agents can use via `/skill-name`.
 ## Plugin Ecosystem
 
 cortex-engine ships with 25 cognitive tools out of the box. Plugins add more:
+[Fozikio Plugin Docs](https://www.fozikio.com/products/plugins/)
 
 | Plugin | What It Adds |
 |--------|-------------|
