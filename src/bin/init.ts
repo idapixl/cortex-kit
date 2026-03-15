@@ -238,11 +238,24 @@ const MCP_JSON = `{
 
 const COGNITIVE_TOOLS_REFERENCE = `# Cognitive Tools
 
-This workspace uses cortex-engine for persistent memory.
+This workspace uses cortex-engine for persistent memory. Cortex is your primary persistence system — use the right tool for each type of knowledge.
 
-## Tools
+## Use the Right Tool
 
-Read before you write. Tool descriptions tell you the rest.
+Don't dump everything into \`observe()\`. Match the tool to what you're recording:
+
+| What you're recording | Use this | Not this |
+|----------------------|----------|----------|
+| A fact you learned or confirmed | \`observe\` | — |
+| An open question or curiosity | \`wonder\` | observe() |
+| A hypothesis or untested idea | \`speculate\` | observe() |
+| A position that could change with new evidence | \`believe\` | observe() |
+| Something worth deeper processing | \`reflect\` | observe() |
+| Ongoing work or open questions across sessions | \`thread_create\` / \`thread_update\` | observe() |
+| Session reflection at end of day | \`journal_write\` | observe() |
+| Operational breadcrumbs during work | \`ops_append\` | observe() |
+
+## Tools Reference
 
 **Write — record knowledge:**
 | Tool | Purpose |
@@ -264,6 +277,14 @@ Read before you write. Tool descriptions tell you the rest.
 | \`neighbors\` | Explore memories connected to a specific concept |
 | \`wander\` | Random walk for serendipitous discovery |
 
+**Threads — ongoing work:**
+| Tool | Purpose |
+|------|---------|
+| \`thread_create\` | Start tracking an ongoing question, project, or exploration |
+| \`thread_update\` | Add progress, change status, link related memories |
+| \`thread_resolve\` | Close a thread with a resolution |
+| \`threads_list\` | See open threads (check at session start) |
+
 **Ops — session tracking:**
 | Tool | Purpose |
 |------|---------|
@@ -271,11 +292,24 @@ Read before you write. Tool descriptions tell you the rest.
 | \`ops_query\` | Search the operational log |
 | \`ops_update\` | Update an ops entry status or content |
 
+**Identity:**
+| Tool | Purpose |
+|------|---------|
+| \`evolve\` | Propose a change to values, preferences, or patterns |
+| \`journal_write\` | Write a daily reflective entry |
+| \`journal_read\` | Read past journal entries |
+
 **System:**
 | Tool | Purpose |
 |------|---------|
 | \`stats\` | Memory counts and namespace health |
 | \`dream\` | Consolidate observations into long-term memories (run periodically) |
+
+## Hard Rules
+
+1. **Read before you write** — call \`query()\` before adding to cortex. Check what you already know.
+2. **Use the full tool suite** — if you're only using observe/query, you're missing the point. Threads, journals, beliefs, and reflections exist for a reason.
+3. **Check threads at session start** — call \`threads_list()\` to see what's in progress before starting new work.
 `;
 
 const OBSIDIAN_APP_JSON = `{
