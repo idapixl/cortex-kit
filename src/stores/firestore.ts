@@ -366,6 +366,16 @@ export class FirestoreCortexStore implements CortexStore {
     return snap.docs.map(doc => docToMemory(doc.id, doc.data()));
   }
 
+  async getRecentMemories(days: number, limit: number): Promise<Memory[]> {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const snap = await this.col('memories')
+      .where('updated_at', '>=', toTimestamp(cutoff))
+      .orderBy('updated_at', 'desc')
+      .limit(limit)
+      .get();
+    return snap.docs.map(doc => docToMemory(doc.id, doc.data()));
+  }
+
   // ─── Observation ───────────────────────────────────────────────────────────
 
   async putObservation(obs: Omit<Observation, 'id'>): Promise<string> {

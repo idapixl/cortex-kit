@@ -6,13 +6,21 @@
  * does not abort the whole cycle.
  *
  * Phases:
- *   1. Cluster   — route unprocessed observations to nearest memories
- *   2. Refine    — update memory definitions from new observations
- *   3. Create    — promote unclustered observations to new memories
- *   4. Connect   — discover edges between recently active memories
- *   5. Score     — FSRS passive review for memories in review/learning
- *   6. Abstract  — REM cross-domain pattern synthesis
- *   7. Report    — narrative summary of the full cycle
+ *   Phase A (NREM analog — compression and binding):
+ *     1. Cluster   — route unprocessed observations to nearest memories
+ *     2. Refine    — update memory definitions from new observations
+ *     3. Create    — promote unclustered observations to new memories
+ *
+ *   Phase B (REM analog — cross-association and integration):
+ *     4. Connect   — discover edges between recently active memories
+ *     5. Score     — FSRS passive review for memories in review/learning
+ *     6. Abstract  — cross-domain pattern synthesis
+ *     7. Report    — narrative summary of the full cycle
+ *
+ * Exported entry points:
+ *   dreamPhaseA()      — run NREM phases only (cluster -> refine -> create)
+ *   dreamPhaseB()      — run REM phases only  (connect -> score -> abstract -> report)
+ *   dreamConsolidate() — run all 7 phases (backward-compatible)
  */
 
 import type { CortexStore } from '../core/store.js';
@@ -21,6 +29,8 @@ import type { LLMProvider } from '../core/llm.js';
 import type { Memory, MemoryCategory, Observation, EdgeRelation } from '../core/types.js';
 import { extractKeywords } from './keywords.js';
 import { scheduleNext, newFSRSState, elapsedDaysSince } from './fsrs.js';
+import { computeFiedlerValue, detectPESaturation } from './graph-metrics.js';
+import type { PESaturationResult } from './graph-metrics.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +48,18 @@ export interface DreamResult {
   duration_ms: number;
   /** clustered / (clustered + unclustered) */
   integration_rate: number;
+  /**
+   * Algebraic connectivity of the memory graph (Fiedler value).
+   * Higher = more integrated knowledge. 0 = disconnected or too few nodes.
+   * Computed during dreamConsolidate() and dreamPhaseB().
+   * Undefined when running dreamPhaseA() alone or when skip_fiedler is set.
+   */
+  fiedler_value?: number;
+  /**
+   * Prediction-error saturation analysis for identity observations.
+   * Undefined when store does not support the required queries or skip_pe_saturation is set.
+   */
+  pe_saturation?: PESaturationResult;
 }
 
 export interface DreamOptions {
@@ -55,38 +77,50 @@ export interface DreamOptions {
   similarity_merge?: number;
   /** Namespace config link threshold */
   similarity_link?: number;
+  /**
+   * If true, skip Fiedler value computation during dreamConsolidate/dreamPhaseB.
+   * Useful for large graphs where the O(n*iter) pass is too slow.
+   */
+  skip_fiedler?: boolean;
+  /**
+   * If true, skip PE saturation detection.
+   */
+  skip_pe_saturation?: boolean;
 }
 
-// ─── Internal result types ────────────────────────────────────────────────────
+// ─── Phase result types ───────────────────────────────────────────────────────
+// Exported so callers of dreamPhaseA / dreamPhaseB can type their return values.
 
-interface ClusterPhaseResult {
+export interface ClusterPhaseResult {
   clustered: number;
   unclustered: number;
   /** Observations that had no near-enough memory to cluster into. */
   unclusteredObs: Observation[];
+  /** Content from clustered observations, keyed by memory ID. Used by Phase 2. */
+  clusteredEvidence: Map<string, string[]>;
 }
 
-interface RefinePhaseResult {
+export interface RefinePhaseResult {
   refined: number;
 }
 
-interface CreatePhaseResult {
+export interface CreatePhaseResult {
   created: number;
 }
 
-interface ConnectPhaseResult {
+export interface ConnectPhaseResult {
   edges_discovered: number;
 }
 
-interface ScorePhaseResult {
+export interface ScorePhaseResult {
   scored: number;
 }
 
-interface AbstractPhaseResult {
+export interface AbstractPhaseResult {
   abstractions: number;
 }
 
-interface ReportPhaseResult {
+export interface ReportPhaseResult {
   text: string;
 }
 
@@ -107,13 +141,17 @@ async function clusterObservations(
 
   let clustered = 0;
   const unclusteredObs: Observation[] = [];
+  const clusteredEvidence = new Map<string, string[]>();
 
   let observations: Observation[];
   try {
     observations = await store.getUnprocessedObservations(limit);
   } catch {
-    return { clustered: 0, unclustered: 0, unclusteredObs: [] };
+    return { clustered: 0, unclustered: 0, unclusteredObs: [], clusteredEvidence: new Map() };
   }
+
+  // Sort by creation time — biological memory consolidation replays in temporal order.
+  observations.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
 
   for (const obs of observations) {
     // Skip observations without embeddings — nothing to cluster on.
@@ -128,12 +166,32 @@ async function clusterObservations(
       if (nearest.length > 0 && nearest[0].score >= threshold) {
         const nearestMemoryId = nearest[0].memory.id;
 
+        // Schema congruence check: a dense neighborhood (5+ edges) signals a
+        // well-established schema — cluster normally. A sparse neighborhood
+        // (<2 edges) with only borderline similarity risks premature generalisation
+        // from a single observation, so keep it episodic instead.
+        const edges = await store.getEdgesFrom(nearestMemoryId);
+        const edgeDensity = edges.length;
+
+        if (edgeDensity < 2 && nearest[0].score < threshold + 0.10) {
+          // Sparse schema + borderline similarity → don't cluster, keep as episodic.
+          unclusteredObs.push(obs);
+          continue;
+        }
+
         // Bump the memory's access count to reflect the clustering.
         // No edge needed — the observation→memory relationship is implicit
         // in the processing, and self-referential edges are useless noise.
         await store.touchMemory(nearestMemoryId, {});
 
         await store.markObservationProcessed(obs.id);
+
+        // Preserve evidence for Phase 2 — clustered content is the highest
+        // information loss point; store it so refineMemories can use it.
+        const existing = clusteredEvidence.get(nearestMemoryId) ?? [];
+        existing.push(obs.content);
+        clusteredEvidence.set(nearestMemoryId, existing);
+
         clustered++;
       } else {
         unclusteredObs.push(obs);
@@ -148,6 +206,7 @@ async function clusterObservations(
     clustered,
     unclustered: unclusteredObs.length,
     unclusteredObs,
+    clusteredEvidence,
   };
 }
 
@@ -162,22 +221,16 @@ async function refineMemories(
   embed: EmbedProvider,
   llm: LLMProvider,
   _options: DreamOptions,
+  clusteredEvidence?: Map<string, string[]>,
 ): Promise<RefinePhaseResult> {
   let refined = 0;
 
-  let allMemories: Memory[];
+  let recentMemories: Memory[];
   try {
-    allMemories = await store.getAllMemories();
+    recentMemories = await store.getRecentMemories(7, 100);
   } catch {
     return { refined: 0 };
   }
-
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-  // Find memories accessed in the last 7 days.
-  const recentMemories = allMemories.filter(
-    (m) => m.last_accessed.getTime() >= sevenDaysAgo,
-  );
 
   for (const memory of recentMemories) {
     try {
@@ -185,12 +238,17 @@ async function refineMemories(
       const edges = await store.getEdgesFrom(memory.id);
       const relatedEdges = edges.filter((e) => e.relation === 'related');
 
-      if (relatedEdges.length === 0) continue;
+      // Direct evidence from Phase 1 clustering takes priority; fall back to edge evidence.
+      const directEvidence = clusteredEvidence?.get(memory.id) ?? [];
+      const edgeEvidence = relatedEdges.slice(0, 10).map((e) => e.evidence).filter(Boolean);
+      const allEvidence = [...directEvidence, ...edgeEvidence];
 
-      // Use edge evidence as the observation content for refinement.
-      const observationSnippets = relatedEdges
+      if (allEvidence.length === 0) continue;
+
+      // Use combined evidence as the observation content for refinement.
+      const observationSnippets = allEvidence
         .slice(0, 10)
-        .map((e) => `- ${e.evidence}`)
+        .map((e) => `- ${e}`)
         .join('\n');
 
       const prompt =
@@ -207,11 +265,12 @@ async function refineMemories(
       if (!newDefinition || newDefinition.trim() === memory.definition.trim()) continue;
 
       // Log the belief change before updating.
+      const totalEvidence = allEvidence.length;
       await store.putBelief({
         concept_id: memory.id,
         old_definition: memory.definition,
         new_definition: newDefinition.trim(),
-        reason: `Dream refinement from ${relatedEdges.length} observations`,
+        reason: `Dream refinement from ${totalEvidence} observations`,
         changed_at: new Date(),
       });
 
@@ -225,6 +284,40 @@ async function refineMemories(
       });
 
       refined++;
+
+      // Re-validate edges from this refined memory — definitions have changed,
+      // so relationships that held before may no longer be accurate.
+      try {
+        const existingEdges = await store.getEdgesFrom(memory.id);
+        for (const edge of existingEdges.slice(0, 5)) {
+          if (edge.relation === 'related') continue; // skip generic edges
+
+          const targetMem = await store.getMemory(edge.target_id);
+          if (!targetMem) continue;
+
+          const validationPrompt =
+            `Does this relationship still hold?\n\n` +
+            `Concept A (updated): ${newDefinition.trim()}\n` +
+            `Concept B: ${targetMem.name} — ${targetMem.definition}\n` +
+            `Relationship: ${edge.relation}\n` +
+            `Evidence: ${edge.evidence}\n\n` +
+            `Respond with JSON: {"valid": true/false, "reason": "brief explanation"}`;
+
+          const validation = await llm.generateJSON<{ valid: boolean; reason: string }>(
+            validationPrompt, { temperature: 0.1 }
+          );
+
+          if (validation && !validation.valid) {
+            // Downweight invalid edge via generic update — putEdge creates new docs.
+            await store.update('edges', edge.id, {
+              weight: edge.weight * 0.3,
+              evidence: `[invalidated] ${validation.reason}. Original: ${edge.evidence}`,
+            });
+          }
+        }
+      } catch {
+        // Edge re-validation is best-effort — don't let it abort the refinement phase.
+      }
     } catch {
       // One memory failing to refine should not stop the rest.
       continue;
@@ -340,18 +433,14 @@ async function discoverEdges(
 ): Promise<ConnectPhaseResult> {
   let edges_discovered = 0;
 
-  let allMemories: Memory[];
+  let recentMemories: Memory[];
   try {
-    allMemories = await store.getAllMemories();
+    recentMemories = await store.getRecentMemories(7, 100);
   } catch {
     return { edges_discovered: 0 };
   }
 
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-  const recent = allMemories
-    .filter((m) => m.updated_at.getTime() >= sevenDaysAgo)
-    .slice(0, 15); // cap to avoid O(n²) explosion
+  const recent = recentMemories.slice(0, 15); // cap to avoid O(n²) explosion
 
   if (recent.length < 2) return { edges_discovered: 0 };
 
@@ -428,13 +517,32 @@ async function scoreMemories(
   const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
   const oneDayAgo = Date.now() - 1 * 24 * 60 * 60 * 1000;
 
-  const reviewable = allMemories.filter(
-    (m) => m.fsrs.state === 'review' || m.fsrs.state === 'learning' || m.fsrs.state === 'relearning',
-  );
+  const reviewable = allMemories.filter((m) => {
+    if (m.fsrs.state !== 'review' && m.fsrs.state !== 'learning' && m.fsrs.state !== 'relearning') {
+      return false;
+    }
+
+    // Skip memories not yet due for review
+    if (m.fsrs.last_review) {
+      const elapsed = elapsedDaysSince(m.fsrs.last_review);
+      // Use stability as proxy for interval (FSRS: retrievability = e^(-elapsed/stability))
+      // Review when elapsed >= 80% of stability (20% tolerance window)
+      const dueThreshold = m.fsrs.stability * 0.8;
+
+      // Learning/relearning have shorter intervals — minimum 0.5 days
+      const minThreshold = (m.fsrs.state === 'learning' || m.fsrs.state === 'relearning') ? 0.5 : 1.0;
+
+      if (elapsed < Math.max(minThreshold, dueThreshold)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   // Batch-fetch edges for contradiction detection
   const reviewableIds = reviewable.map((m) => m.id);
-  let contradictionSet: Set<string> = new Set();
+  const contradictionSet: Set<string> = new Set();
   try {
     const edges = await store.getEdgesForMemories(reviewableIds);
     for (const edge of edges) {
@@ -587,7 +695,7 @@ async function abstractCrossDomain(
         ? firstSentence.slice(0, 97) + '...'
         : firstSentence;
 
-      await store.putMemory({
+      const abstractionId = await store.putMemory({
         name: memName,
         definition: trimmed,
         category: 'insight',
@@ -604,6 +712,22 @@ async function abstractCrossDomain(
         memory_origin: 'abstract',
       });
 
+      // Create provenance edges from abstraction to each source memory
+      for (const sourceMem of sampledMemories) {
+        try {
+          await store.putEdge({
+            source_id: abstractionId,
+            target_id: sourceMem.id,
+            relation: 'exemplifies',
+            weight: 0.8,
+            evidence: `Dream abstraction source: [${sourceMem.category}] ${sourceMem.name}`,
+            created_at: new Date(),
+          });
+        } catch {
+          // Edge creation failure shouldn't abort the abstraction
+        }
+      }
+
       abstractions++;
     } catch {
       continue;
@@ -617,7 +741,7 @@ async function abstractCrossDomain(
 
 /**
  * Generate a human-readable narrative of what the dream cycle accomplished.
- * Called last so it can include abstraction count.
+ * Called last so it can include abstraction count, Fiedler value, and PE stats.
  */
 async function generateReport(
   llm: LLMProvider,
@@ -627,13 +751,23 @@ async function generateReport(
   connect: ConnectPhaseResult,
   score: ScorePhaseResult,
   abstract: AbstractPhaseResult,
+  fiedlerValue?: number,
+  peSaturation?: PESaturationResult,
 ): Promise<ReportPhaseResult> {
   try {
+    const fiedlerNote = fiedlerValue !== undefined
+      ? ` Graph connectivity (Fiedler value): ${fiedlerValue.toFixed(4)}.`
+      : '';
+    const peNote = peSaturation
+      ? ` PE saturation: mean_pe=${peSaturation.mean_pe.toFixed(3)}, trend=${peSaturation.trend}${peSaturation.saturated ? ' (SATURATED)' : ''}.`
+      : '';
+
     const prompt =
       `Summarize this dream consolidation session in 2-3 sentences.\n\n` +
       `Stats: ${cluster.clustered} observations clustered, ${refine.refined} memories refined, ` +
       `${create.created} new memories created, ${connect.edges_discovered} edges discovered, ` +
-      `${score.scored} memories reviewed, ${abstract.abstractions} abstractions formed.\n\n` +
+      `${score.scored} memories reviewed, ${abstract.abstractions} abstractions formed.` +
+      fiedlerNote + peNote + `\n\n` +
       `Write a brief, reflective summary of what was learned and consolidated.`;
 
     const text = await llm.generate(prompt, {
@@ -643,13 +777,109 @@ async function generateReport(
 
     return { text: text.trim() };
   } catch {
+    const fiedlerNote = fiedlerValue !== undefined
+      ? ` Fiedler=${fiedlerValue.toFixed(4)}.`
+      : '';
     const fallback =
       `Dream cycle complete. ` +
       `Clustered ${cluster.clustered} observations, refined ${refine.refined} memories, ` +
       `created ${create.created} new memories, discovered ${connect.edges_discovered} edges, ` +
-      `reviewed ${score.scored} memories, formed ${abstract.abstractions} abstractions.`;
+      `reviewed ${score.scored} memories, formed ${abstract.abstractions} abstractions.` +
+      fiedlerNote;
     return { text: fallback };
   }
+}
+
+// ─── Public: Phase A (NREM) ───────────────────────────────────────────────────
+
+/**
+ * Phase A (NREM analog): compression and binding.
+ *
+ * Run during or right after sessions to compress raw observations into the
+ * memory graph. Does not perform cross-association or scoring — those are
+ * Phase B concerns.
+ *
+ * Phases executed: Cluster -> Refine -> Create
+ */
+export async function dreamPhaseA(
+  store: CortexStore,
+  embed: EmbedProvider,
+  llm: LLMProvider,
+  options: DreamOptions = {},
+): Promise<{ cluster: ClusterPhaseResult; refine: RefinePhaseResult; create: CreatePhaseResult }> {
+  const clusterResult = await clusterObservations(store, embed, options);
+  const refineResult = await refineMemories(store, embed, llm, options, clusterResult.clusteredEvidence);
+  const createResult = await createFromUnclustered(store, embed, llm, clusterResult.unclusteredObs, options);
+  return { cluster: clusterResult, refine: refineResult, create: createResult };
+}
+
+// ─── Public: Phase B (REM) ────────────────────────────────────────────────────
+
+/**
+ * Phase B (REM analog): cross-association and integration.
+ *
+ * Run in cron sessions for deep integration: edge discovery, FSRS scoring,
+ * cross-domain abstraction, and report generation.
+ *
+ * Also computes the Fiedler value (graph health) and PE saturation unless
+ * suppressed via options.skip_fiedler / options.skip_pe_saturation.
+ *
+ * Phases executed: Connect -> Score -> Abstract -> Report
+ */
+export async function dreamPhaseB(
+  store: CortexStore,
+  embed: EmbedProvider,
+  llm: LLMProvider,
+  options: DreamOptions = {},
+): Promise<{
+  connect: ConnectPhaseResult;
+  score: ScorePhaseResult;
+  abstract: AbstractPhaseResult;
+  report: ReportPhaseResult;
+  fiedler_value: number | undefined;
+  pe_saturation: PESaturationResult | undefined;
+}> {
+  const connectResult = await discoverEdges(store, llm, options);
+  const scoreResult = await scoreMemories(store, options);
+  const abstractResult = await abstractCrossDomain(store, embed, llm, options);
+
+  // Graph health metrics — run in parallel for speed.
+  const [fiedlerValue, peSaturation] = await Promise.all([
+    options.skip_fiedler
+      ? Promise.resolve(undefined)
+      : computeFiedlerValue(store).catch(() => undefined),
+    options.skip_pe_saturation
+      ? Promise.resolve(undefined)
+      : detectPESaturation(store).catch(() => undefined),
+  ]);
+
+  // Partial-cycle report: pass zero counts for NREM phases.
+  const emptyCluster: ClusterPhaseResult = {
+    clustered: 0,
+    unclustered: 0,
+    unclusteredObs: [],
+    clusteredEvidence: new Map(),
+  };
+  const reportResult = await generateReport(
+    llm,
+    emptyCluster,
+    { refined: 0 },
+    { created: 0 },
+    connectResult,
+    scoreResult,
+    abstractResult,
+    fiedlerValue,
+    peSaturation,
+  );
+
+  return {
+    connect: connectResult,
+    score: scoreResult,
+    abstract: abstractResult,
+    report: reportResult,
+    fiedler_value: fiedlerValue,
+    pe_saturation: peSaturation,
+  };
 }
 
 // ─── Main: dreamConsolidate ───────────────────────────────────────────────────
@@ -658,10 +888,12 @@ async function generateReport(
  * Run the full 7-phase dream consolidation cycle.
  *
  * Phase ordering:
- *   1 Cluster → 2 Refine → 3 Create → 4 Connect → 5 Score → 6 Abstract → 7 Report
+ *   1 Cluster -> 2 Refine -> 3 Create -> 4 Connect -> 5 Score -> 6 Abstract -> 7 Report
  *
- * Report runs last so it can include abstraction stats.
+ * Report runs last so it can include abstraction stats, Fiedler value, and PE.
  * A phase error is caught internally — the cycle continues with degraded output.
+ *
+ * Backward compatible: existing callers using dreamConsolidate() are unaffected.
  */
 export async function dreamConsolidate(
   store: CortexStore,
@@ -674,8 +906,8 @@ export async function dreamConsolidate(
   // Phase 1 — Cluster
   const clusterResult = await clusterObservations(store, embed, options);
 
-  // Phase 2 — Refine
-  const refineResult = await refineMemories(store, embed, llm, options);
+  // Phase 2 — Refine (receives clustered evidence from Phase 1)
+  const refineResult = await refineMemories(store, embed, llm, options, clusterResult.clusteredEvidence);
 
   // Phase 3 — Create
   const createResult = await createFromUnclustered(
@@ -695,6 +927,16 @@ export async function dreamConsolidate(
   // Phase 6 — Abstract (REM)
   const abstractResult = await abstractCrossDomain(store, embed, llm, options);
 
+  // Graph health metrics — run in parallel, don't block the report.
+  const [fiedlerValue, peSaturation] = await Promise.all([
+    options.skip_fiedler
+      ? Promise.resolve(undefined)
+      : computeFiedlerValue(store).catch(() => undefined),
+    options.skip_pe_saturation
+      ? Promise.resolve(undefined)
+      : detectPESaturation(store).catch(() => undefined),
+  ]);
+
   // Phase 7 — Report (runs after abstract to include abstraction count)
   const reportResult = await generateReport(
     llm,
@@ -704,6 +946,8 @@ export async function dreamConsolidate(
     connectResult,
     scoreResult,
     abstractResult,
+    fiedlerValue,
+    peSaturation,
   );
 
   const duration_ms = Date.now() - start;
@@ -723,5 +967,7 @@ export async function dreamConsolidate(
     total_processed: clusterResult.clustered + createResult.created,
     duration_ms,
     integration_rate,
+    fiedler_value: fiedlerValue,
+    pe_saturation: peSaturation,
   };
 }

@@ -35,6 +35,7 @@ import { journalReadTool } from '../tools/journal-read.js';
 import { evolveTool } from '../tools/evolve.js';
 import { evolutionListTool } from '../tools/evolution-list.js';
 import { agentInvokeTool } from '../tools/agent-invoke.js';
+import { goalTool } from '../tools/goal.js';
 
 // ─── Tool Context ─────────────────────────────────────────────────────────────
 
@@ -188,8 +189,8 @@ const queryTool: ToolDefinition = {
     const fetchLimit = Math.max(limit * 3, 15);
     const nearest = await store.findNearest(queryEmbedding, fetchLimit);
 
-    // Spread activation for richer results
-    const activated = await spreadActivation(store, nearest);
+    // Spread activation for richer results — pass query embedding for query-conditioned BFS
+    const activated = await spreadActivation(store, nearest, queryEmbedding);
 
     // Score retrievability, apply composite ranking, filter, and touch accessed memories
     const now = new Date();
@@ -959,9 +960,46 @@ const reflectTool: ToolDefinition = {
   },
 };
 
+/**
+ * epistemicScore — score a memory candidate by information-gain potential.
+ *
+ * Higher scores mean the memory is more worth visiting:
+ *   - Under-explored (low access_count)
+ *   - Uncertain belief (low confidence)
+ *   - Is a goal (goal proximity attracts exploration)
+ *   - Stale (long since last access)
+ *   - Base randomness (preserve serendipity)
+ */
+function epistemicScore(memory: import('../core/types.js').Memory): number {
+  let score = 0;
+
+  // Under-explored memories
+  if (memory.access_count < 3) score += 0.3;
+
+  // Uncertain beliefs warrant revisiting
+  if (memory.confidence < 0.5) score += 0.2;
+
+  // Goals attract exploration — they represent desired future states
+  if (memory.category === 'goal') score += 0.4;
+
+  // Memories not accessed in 14+ days are worth surfacing
+  const daysSinceAccess =
+    (Date.now() - memory.last_accessed.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSinceAccess > 14) score += 0.2;
+
+  // Base randomness so walks are never fully deterministic
+  score += Math.random() * 0.3;
+
+  return score;
+}
+
 const wanderTool: ToolDefinition = {
   name: 'wander',
-  description: 'Take a random walk through your memories. Hops between connected concepts for serendipitous discovery. Use when you want inspiration or to explore what you know without a specific question.',
+  description:
+    'Take an information-gain-weighted walk through your memories. ' +
+    'Prefers under-explored, uncertain, goal-adjacent, and stale nodes while ' +
+    'preserving serendipity. Use when you want inspiration or to surface what ' +
+    'deserves more attention.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -975,41 +1013,68 @@ const wanderTool: ToolDefinition = {
 
     const store: CortexStore = ctx.namespaces.getStore(namespace);
 
-    // Get all memories and pick a random seed
+    // Get all memories
     const allMemories = await store.getAllMemories();
     if (allMemories.length === 0) {
       return { namespace: namespace ?? ctx.namespaces.getDefaultNamespace(), path: [], message: 'No memories to wander through' };
     }
 
-    const seedMemory = allMemories[Math.floor(Math.random() * allMemories.length)];
-    const path: Array<{ step: number; memory: ReturnType<typeof memoryToSummary>; relation?: string }> = [
-      { step: 0, memory: memoryToSummary(seedMemory) },
+    // Epistemic seed selection: pick from top candidates by info-gain score
+    const scoredAll = allMemories.map(m => ({ memory: m, score: epistemicScore(m) }));
+    scoredAll.sort((a, b) => b.score - a.score);
+    // Weighted-random pick from top 10 to preserve serendipity
+    const seedPool = scoredAll.slice(0, Math.min(10, scoredAll.length));
+    const totalSeedWeight = seedPool.reduce((s, c) => s + c.score, 0);
+    let seedRand = Math.random() * totalSeedWeight;
+    let seedMemory = seedPool[0].memory;
+    for (const candidate of seedPool) {
+      seedRand -= candidate.score;
+      if (seedRand <= 0) { seedMemory = candidate.memory; break; }
+    }
+
+    const path: Array<{ step: number; memory: ReturnType<typeof memoryToSummary>; relation?: string; epistemic_score?: number }> = [
+      { step: 0, memory: memoryToSummary(seedMemory), epistemic_score: epistemicScore(seedMemory) },
     ];
 
     let currentId = seedMemory.id;
+    const visited = new Set<string>([seedMemory.id]);
 
     for (let step = 1; step <= steps; step++) {
       const edges = await store.getEdgesFrom(currentId);
       if (edges.length === 0) break;
 
-      // Pick a random edge weighted by edge weight
-      const totalWeight = edges.reduce((sum, e) => sum + e.weight, 0);
-      let rand = Math.random() * totalWeight;
-      let chosenEdge = edges[0];
+      // Resolve neighbor memories and score by epistemic value
+      const candidates: Array<{ memory: import('../core/types.js').Memory; edge: typeof edges[0]; score: number }> = [];
       for (const edge of edges) {
-        rand -= edge.weight;
-        if (rand <= 0) { chosenEdge = edge; break; }
+        if (visited.has(edge.target_id)) continue;
+        const neighbor = await store.getMemory(edge.target_id);
+        if (!neighbor) continue;
+        // Combine edge weight with epistemic score so well-connected AND
+        // high-information-gain nodes are preferred
+        const score = edge.weight * 0.4 + epistemicScore(neighbor) * 0.6;
+        candidates.push({ memory: neighbor, edge, score });
       }
 
-      const nextMemory = await store.getMemory(chosenEdge.target_id);
-      if (!nextMemory) break;
+      if (candidates.length === 0) break;
+
+      // Weighted-random selection to preserve serendipity
+      const totalWeight = candidates.reduce((s, c) => s + c.score, 0);
+      let rand = Math.random() * totalWeight;
+      let chosen = candidates[0];
+      for (const candidate of candidates) {
+        rand -= candidate.score;
+        if (rand <= 0) { chosen = candidate; break; }
+      }
 
       path.push({
         step,
-        memory: memoryToSummary(nextMemory),
-        relation: chosenEdge.relation,
+        memory: memoryToSummary(chosen.memory),
+        relation: chosen.edge.relation,
+        epistemic_score: parseFloat(chosen.score.toFixed(3)),
       });
-      currentId = chosenEdge.target_id;
+
+      visited.add(chosen.memory.id);
+      currentId = chosen.memory.id;
     }
 
     return {
@@ -1139,6 +1204,7 @@ export function createTools(): ToolDefinition[] {
     evolveTool,
     evolutionListTool,
     agentInvokeTool,
+    goalTool,
   ];
 }
 

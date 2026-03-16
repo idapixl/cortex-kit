@@ -54,6 +54,10 @@ export class ScopedStore implements CortexStore {
     return this.inner.getAllMemories();
   }
 
+  getRecentMemories(days: number, limit: number): Promise<Memory[]> {
+    return this.inner.getRecentMemories(days, limit);
+  }
+
   // ─── Observation ──────────────────────────────────────────────────────────
 
   putObservation(obs: Omit<Observation, 'id'>): Promise<string> {

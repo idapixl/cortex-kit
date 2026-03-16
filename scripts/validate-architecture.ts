@@ -309,7 +309,7 @@ async function main(): Promise<void> {
     if (ts) {
       // spreadActivation takes SearchResult[], not string[]
       const seedResults = [{ memory: memoryToSummary(ts), score: 1.0, distance: 0 }];
-      const activated = await spreadActivation(store, seedResults, 2);
+      const activated = await spreadActivation(store, seedResults, undefined, 2);
       assert(activated.length >= 1, `Activated ${activated.length} memories`);
 
       // JavaScript should be activated via the edge

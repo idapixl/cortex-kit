@@ -8,12 +8,16 @@ Most AI agents forget everything when the session ends. `cortex-engine` fixes th
 
 - **Semantic memory** — store and retrieve observations, beliefs, questions, and hypotheses as interconnected nodes
 - **Belief tracking** — agents hold positions that update when new evidence contradicts them
-- **Dream consolidation** — batches of short-term observations compress into durable long-term memories (like biological sleep consolidation)
-- **Spaced repetition (FSRS)** — memories that aren't accessed fade over time, keeping retrieval relevant
+- **Two-phase dream consolidation** — NREM compression (cluster, refine, create) + REM integration (connect, score, abstract) — modeled on biological sleep stages
+- **Goal-directed cognition** — `goal_set` creates desired future states that generate forward prediction error, biasing consolidation and exploration toward what matters
+- **Neuroscience-grounded retrieval** — GNN neighborhood aggregation, query-conditioned spreading activation, multi-anchor Thousand Brains voting, epistemic foraging
+- **Information geometry** — locally-adaptive clustering thresholds that respect embedding space curvature, schema congruence scoring
+- **Graph health metrics** — Fiedler value (algebraic connectivity) measures knowledge integration; PE saturation detection prevents identity model ossification
+- **Spaced repetition (FSRS)** — interval-aware scheduling with consolidation-state-dependent decay profiles
 - **Embeddings** — pluggable providers (built-in, OpenAI, Vertex AI, Ollama) — no external service required by default
 - **LLM-agnostic** — pluggable LLM providers: Ollama (free/local), Gemini, DeepSeek, Hugging Face, OpenRouter, OpenAI, or any OpenAI-compatible API
 - **Agent dispatch** — `agent_invoke` lets your agent spawn cheap, cortex-aware sub-tasks using any configured LLM. Knowledge compounds across sessions.
-- **MCP server** — 26 cognitive tools (`query`, `observe`, `believe`, `wander`, `dream`, `agent_invoke`, etc.) over the Model Context Protocol
+- **MCP server** — 27 cognitive tools (`query`, `observe`, `believe`, `wander`, `dream`, `goal_set`, `agent_invoke`, etc.) over the Model Context Protocol
 
 The result: personality and expertise emerge from accumulated experience, not system prompts. An agent with 200 observations about distributed systems doesn't need to be told "you care about distributed systems." It just knows.
 
@@ -36,13 +40,13 @@ Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs loc
 ## Quick Start
 
 ```bash
-npm install cortex-engine@0.8.0
+npm install cortex-engine@0.9.0
 npx fozikio init my-agent
 cd my-agent
 npx fozikio serve   # starts MCP server
 ```
 
-Your agent now has 26 cognitive tools. The generated `.mcp.json` is version-pinned and platform-aware (Windows `cmd /c` wrapper handled automatically).
+Your agent now has 27 cognitive tools. The generated `.mcp.json` is version-pinned and platform-aware (Windows `cmd /c` wrapper handled automatically).
 
 See the **[Quick Start](https://github.com/Fozikio/cortex-engine/wiki/Quick-Start)** wiki page for the full 5-minute setup.
 

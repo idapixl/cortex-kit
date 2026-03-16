@@ -15,7 +15,8 @@ export type MemoryCategory =
   | 'value'
   | 'project'
   | 'insight'
-  | 'observation';
+  | 'observation'
+  | 'goal';
 
 export type FSRSState = 'new' | 'learning' | 'review' | 'relearning';
 

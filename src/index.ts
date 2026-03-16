@@ -69,6 +69,8 @@ export {
   predictionErrorGate,
   hydeExpand,
   spreadActivation,
+  aggregatedRetrieval,
+  multiAnchorRetrieval,
   memoryToSummary,
   SIMILARITY_MERGE,
   SIMILARITY_LINK,
@@ -76,8 +78,21 @@ export {
   MAX_ACTIVATION_DEPTH,
 } from './engines/memory.js';
 
-export { dreamConsolidate } from './engines/cognition.js';
-export type { DreamResult, DreamOptions } from './engines/cognition.js';
+export { dreamConsolidate, dreamPhaseA, dreamPhaseB } from './engines/cognition.js';
+export type {
+  DreamResult,
+  DreamOptions,
+  ClusterPhaseResult,
+  RefinePhaseResult,
+  CreatePhaseResult,
+  ConnectPhaseResult,
+  ScorePhaseResult,
+  AbstractPhaseResult,
+  ReportPhaseResult,
+} from './engines/cognition.js';
+
+export { computeFiedlerValue, detectPESaturation } from './engines/graph-metrics.js';
+export type { PESaturationResult } from './engines/graph-metrics.js';
 
 export { digestDocument } from './engines/digest.js';
 export type { DigestOptions, DigestResult } from './engines/digest.js';
@@ -141,3 +156,4 @@ export { journalWriteTool } from './tools/journal-write.js';
 export { journalReadTool } from './tools/journal-read.js';
 export { evolveTool } from './tools/evolve.js';
 export { evolutionListTool } from './tools/evolution-list.js';
+export { goalTool } from './tools/goal.js';

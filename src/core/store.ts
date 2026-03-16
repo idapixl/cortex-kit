@@ -39,6 +39,9 @@ export interface CortexStore {
   /** Get all memories (for batch operations like dream scoring). Use with caution. */
   getAllMemories(): Promise<Memory[]>;
 
+  /** Get memories updated within the last N days, limited to M results. */
+  getRecentMemories(days: number, limit: number): Promise<Memory[]>;
+
   // ─── Observation ─────────────────────────────────────────────────────────────
 
   /** Store a new observation, returns its ID. */

@@ -402,6 +402,13 @@ export class SqliteCortexStore implements CortexStore {
     return (this.db.prepare(`SELECT * FROM ${this.t('memories')}`).all() as MemoryRow[]).map(rowToMemory);
   }
 
+  async getRecentMemories(days: number, limit: number): Promise<Memory[]> {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    return (this.db.prepare(
+      `SELECT * FROM ${this.t('memories')} WHERE updated_at >= ? ORDER BY updated_at DESC LIMIT ?`
+    ).all(cutoff, limit) as MemoryRow[]).map(rowToMemory);
+  }
+
   // ─── Observation ───────────────────────────────────────────────────────────
 
   async putObservation(obs: Omit<Observation, 'id'>): Promise<string> {
