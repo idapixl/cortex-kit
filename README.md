@@ -34,13 +34,15 @@ Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs loc
 ## Quick Start
 
 ```bash
-npm install cortex-engine
+npm install cortex-engine@0.6.0
 npx fozikio init my-agent
 cd my-agent
-npx cortex-engine   # starts MCP server
+npx fozikio serve   # starts MCP server
 ```
 
-Your agent now has 25 cognitive tools. See the **[Quick Start](https://github.com/Fozikio/cortex-engine/wiki/Quick-Start)** wiki page for the full 5-minute setup.
+Your agent now has 25 cognitive tools. The generated `.mcp.json` is version-pinned and platform-aware (Windows `cmd /c` wrapper handled automatically).
+
+See the **[Quick Start](https://github.com/Fozikio/cortex-engine/wiki/Quick-Start)** wiki page for the full 5-minute setup.
 
 ### Multi-Agent
 
@@ -55,6 +57,18 @@ Each agent gets isolated memory via namespaces. See the **[Architecture](https:/
 ### Agent-First Setup
 
 The fastest path: open an AI agent in an empty directory and say *"set up a cortex workspace."* The agent runs `npx fozikio init`, reads the generated files, and is immediately productive. See the **[Installation](https://github.com/Fozikio/cortex-engine/wiki/Installation)** wiki page for the full guide.
+
+### CLI
+
+```bash
+npx fozikio serve              # start MCP server
+npx fozikio health             # memory health report
+npx fozikio vitals             # behavioral vitals and prediction error
+npx fozikio wander             # walk through the memory graph
+npx fozikio wander --from "auth"  # seeded walk from a topic
+npx fozikio maintain fix       # scan and repair data issues
+npx fozikio report             # weekly quality report
+```
 
 ### Development
 
@@ -98,8 +112,7 @@ Skills are invocable workflows that agents can use via `/skill-name`.
 
 | Skill | When to Use | What It Provides |
 |-------|-------------|-----------------|
-| `cortex-query` | Before evaluation, review, design, or creation work | Best practices for querying cortex — specificity, keyword mode, neighbor exploration, anti-patterns |
-| `cortex-review` | When reviewing code, designs, or proposals | A structured review workflow that grounds feedback in cortex memory, with a standard output format |
+| `cortex-memory` | Query, record, and review work | Full memory workflow — query/observe patterns, belief tracking, memory-grounded code review, session patterns |
 
 ### Agents
 
