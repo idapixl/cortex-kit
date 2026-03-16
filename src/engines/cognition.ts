@@ -557,16 +557,20 @@ async function abstractCrossDomain(
       const prompt =
         `Find a higher-level principle or pattern that connects these diverse concepts:\n\n` +
         `${conceptLines}\n\n` +
-        `Write a concise abstraction (1-2 sentences) that captures the deeper connection. ` +
+        `Write a concise abstraction (2-4 sentences) that captures the deeper connection. ` +
+        `Be specific — name the pattern and explain why it matters. ` +
         `If no meaningful connection exists, respond with 'NO_ABSTRACTION'.`;
 
       const result = await llm.generate(prompt, {
         temperature: 0.4,
-        maxTokens: 200,
+        maxTokens: 500,
       });
 
       const trimmed = result.trim();
       if (!trimmed || trimmed === 'NO_ABSTRACTION') continue;
+
+      // Validate: must end with sentence-ending punctuation (not truncated mid-sentence)
+      if (!/[.!?]$/.test(trimmed)) continue;
 
       // Check novelty — don't store abstractions too similar to existing memories.
       const abstEmbedding = await embed.embed(trimmed);
@@ -577,8 +581,14 @@ async function abstractCrossDomain(
         continue;
       }
 
+      // Use first sentence as name, full text as definition
+      const firstSentence = trimmed.match(/^[^.!?]+[.!?]/)?.[0]?.trim() ?? trimmed;
+      const memName = firstSentence.length > 100
+        ? firstSentence.slice(0, 97) + '...'
+        : firstSentence;
+
       await store.putMemory({
-        name: trimmed.length > 60 ? trimmed.slice(0, 60) : trimmed,
+        name: memName,
         definition: trimmed,
         category: 'insight',
         salience: 0.8,
