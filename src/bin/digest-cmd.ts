@@ -8,6 +8,7 @@
  *   fozikio digest --pipeline observe,reflect,predict   Custom pipeline
  *   fozikio digest --namespace prediction               Target namespace
  *   fozikio digest --dir <path>                         Directory to scan for --pending
+ *   fozikio digest --dir <path> --all                   Process ALL .md files in directory
  */
 
 import { readFileSync, writeFileSync, readdirSync, statSync, renameSync, mkdirSync, existsSync } from 'node:fs';
@@ -28,6 +29,7 @@ import type { LLMProvider } from '../core/llm.js';
 interface ParsedArgs {
   file: string | null;
   pending: boolean;
+  all: boolean;
   dryRun: boolean;
   pipeline: string[];
   namespace: string | null;
@@ -52,6 +54,7 @@ interface ParsedFile {
 function parseArgs(args: string[]): ParsedArgs {
   let file: string | null = null;
   let pending = false;
+  let all = false;
   let dryRun = false;
   let pipeline: string[] = ['observe', 'reflect'];
   let namespace: string | null = null;
@@ -62,6 +65,8 @@ function parseArgs(args: string[]): ParsedArgs {
 
     if (arg === '--pending') {
       pending = true;
+    } else if (arg === '--all') {
+      all = true;
     } else if (arg === '--dry-run') {
       dryRun = true;
     } else if (arg === '--pipeline' && args[i + 1]) {
@@ -75,12 +80,12 @@ function parseArgs(args: string[]): ParsedArgs {
     }
   }
 
-  // --pending is implicit when --dry-run is given without a file
-  if (dryRun && !file) {
+  // --pending is implicit when --dry-run is given without a file (unless --all)
+  if (dryRun && !file && !all) {
     pending = true;
   }
 
-  return { file, pending, dryRun, pipeline, namespace, dir };
+  return { file, pending, all, dryRun, pipeline, namespace, dir };
 }
 
 // ─── Provider Setup ───────────────────────────────────────────────────────────
@@ -310,11 +315,12 @@ function findPendingFiles(dir: string): string[] {
 export async function runDigest(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
 
-  if (!parsed.file && !parsed.pending) {
+  if (!parsed.file && !parsed.pending && !parsed.all) {
     process.stderr.write(
       'Usage:\n' +
       '  fozikio digest <file>                  Process a single file\n' +
       '  fozikio digest --pending               Process files with directive: digest\n' +
+      '  fozikio digest --dir <path> --all      Process ALL .md files in directory\n' +
       '  fozikio digest --dry-run               Show what would be processed\n' +
       '  fozikio digest --pipeline <steps>      Custom pipeline (default: observe,reflect)\n' +
       '  fozikio digest --namespace <ns>        Target namespace\n' +
@@ -342,8 +348,10 @@ export async function runDigest(args: string[]): Promise<void> {
     return;
   }
 
-  // --pending mode (includes --dry-run).
-  const files = findPendingFiles(parsed.dir);
+  // Batch mode: --all scans everything, --pending filters by directive
+  const files = parsed.all
+    ? scanMarkdownFiles(parsed.dir)
+    : findPendingFiles(parsed.dir);
 
   if (files.length === 0) {
     process.stderr.write(`No pending files found in: ${parsed.dir}\n`);

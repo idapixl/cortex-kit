@@ -9,6 +9,8 @@
  *   observe  — embed and store content as observations (with prediction error gating)
  *   reflect  — generate LLM insights connecting content to existing memories
  *   predict  — extract forward-looking claims and store as prediction observations
+ *   extract  — LLM-categorize content into typed observations (beliefs, questions,
+ *              hypotheses, reflections) using the existing content_type system
  */
 
 import { parse as parseYaml } from 'yaml';
@@ -379,6 +381,99 @@ async function runPredictStep(
   return extractedPredictions;
 }
 
+// ─── Extract Step ────────────────────────────────────────────────────────────
+
+interface ExtractedItem {
+  text: string;
+  type: 'belief' | 'question' | 'hypothesis' | 'reflection' | 'fact';
+  salience: number;
+}
+
+const CONTENT_TYPE_MAP: Record<ExtractedItem['type'], string> = {
+  belief: 'declarative',
+  question: 'interrogative',
+  hypothesis: 'speculative',
+  reflection: 'reflective',
+  fact: 'declarative',
+};
+
+async function runExtractStep(
+  body: string,
+  store: CortexStore,
+  embed: EmbedProvider,
+  llm: LLMProvider,
+  sourceFile: string,
+  salience: number,
+): Promise<ObserveStepResult> {
+  const observation_ids: string[] = [];
+  const memories_linked: string[] = [];
+
+  const snippet = body.length > 3000 ? body.slice(0, 3000) + '...' : body;
+
+  const prompt =
+    `Extract structured knowledge from this text. Categorize each item:\n\n` +
+    `- belief: a position held, value, preference, opinion, or aesthetic choice\n` +
+    `- question: an open question, curiosity, or unresolved wonder\n` +
+    `- hypothesis: an untested idea, speculation, or "what if"\n` +
+    `- reflection: a synthesized insight, emotional response, or pattern noticed\n` +
+    `- fact: a concrete, verified piece of information\n\n` +
+    `Return a JSON array. Each item: { "text": "...", "type": "belief|question|hypothesis|reflection|fact", "salience": 0.3-0.9 }\n` +
+    `Higher salience for strongly held beliefs, recurring patterns, and emotional reactions.\n` +
+    `Only include items with real substance — skip filler and operational noise.\n` +
+    `If nothing worth extracting, return [].\n\n` +
+    `Text:\n${snippet}`;
+
+  try {
+    const items = await llm.generateJSON<ExtractedItem[]>(prompt, {
+      temperature: 0.2,
+      maxTokens: 1024,
+    });
+
+    if (!Array.isArray(items)) return { observation_ids, memories_linked };
+
+    for (const item of items.slice(0, 10)) {
+      if (!item.text || item.text.length < 10) continue;
+
+      try {
+        const embedding = await embed.embed(item.text);
+        const gate = await predictionErrorGate(store, embedding);
+        const keywords = extractKeywords(item.text);
+        const contentType = CONTENT_TYPE_MAP[item.type] ?? 'declarative';
+        const itemSalience = typeof item.salience === 'number'
+          ? Math.min(0.9, Math.max(0.3, item.salience))
+          : salience / 10;
+
+        if (gate.decision === 'merge') continue; // Already known — skip
+
+        const id = await store.putObservation({
+          content: item.text,
+          source_file: sourceFile,
+          source_section: `digest:extract:${item.type}`,
+          salience: itemSalience,
+          processed: false,
+          prediction_error: gate.max_similarity > 0 ? 1 - gate.max_similarity : null,
+          created_at: new Date(),
+          updated_at: new Date(),
+          embedding,
+          keywords,
+          content_type: contentType as 'declarative' | 'interrogative' | 'speculative' | 'reflective',
+        });
+
+        observation_ids.push(id);
+        if (gate.decision === 'link' && gate.nearest_id) {
+          memories_linked.push(gate.nearest_id);
+        }
+      } catch {
+        // Single item failure — continue with rest
+      }
+    }
+  } catch {
+    // LLM extraction failed — return whatever accumulated
+  }
+
+  return { observation_ids, memories_linked };
+}
+
 // ─── Main: digestDocument ─────────────────────────────────────────────────────
 
 /**
@@ -464,6 +559,25 @@ export async function digestDocument(
           pipeline_executed.push('predict');
         } catch {
           pipeline_executed.push('predict:failed');
+        }
+        break;
+      }
+
+      case 'extract': {
+        try {
+          const result = await runExtractStep(
+            body,
+            store,
+            embed,
+            llm,
+            sourceFile,
+            salience,
+          );
+          observation_ids.push(...result.observation_ids);
+          memories_linked.push(...result.memories_linked);
+          pipeline_executed.push('extract');
+        } catch {
+          pipeline_executed.push('extract:failed');
         }
         break;
       }
