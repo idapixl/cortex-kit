@@ -72,7 +72,11 @@
     "fsrs",
     "mcp",
     "ai-agent",
-    "embeddings"
+    "embeddings",
+    "fozikio",
+    "persistent-memory",
+    "knowledge-graph",
+    "spaced-repetition"
   ],
   "license": "MIT",
   "author": "Fozikio <hello@fozikio.com>",
@@ -80,7 +84,7 @@
     "type": "git",
     "url": "https://github.com/Fozikio/cortex-engine.git"
   },
-  "homepage": "https://fozikio.com",
+  "homepage": "https://github.com/Fozikio/cortex-engine/wiki",
   "funding": {
     "type": "github",
     "url": "https://github.com/sponsors/idapixl"
