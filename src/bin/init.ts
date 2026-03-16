@@ -130,10 +130,10 @@ identity:
 
 agents: {}
 
-# Two memory spaces by default:
-#   project — tech stack, patterns, architecture, code conventions
-#   personal — user preferences, working style, relationship context
-# They don't leak into each other unless you want them to.
+# Each named entry is an isolated memory namespace with its own store.
+# This default gives you two: project knowledge and personal context.
+# Rename, remove, or add more — the architecture is modular:
+#   one namespace, five, shared across agents, scoped per-agent — your call.
 cortex:
   project:
     store: ${opts.store}
@@ -346,13 +346,12 @@ This workspace uses [cortex-engine](https://github.com/Fozikio/cortex-engine) fo
 
 You have persistent memory via cortex. Use it naturally:
 
-- After learning something about the project → \`observe("...", namespace: "project")\`
-- After learning a user preference → \`observe("...", namespace: "personal")\`
 - Before starting work → \`query()\` what you know about the topic
+- After learning something → \`observe("...", namespace: "<relevant-namespace>")\`
 - For ongoing work → \`thread_create()\` / \`thread_update()\`
 - Before observing → ask: would my future self search for this? If not, skip it.
 
-Two memory spaces: **project** (tech stack, patterns, architecture) and **personal** (preferences, working style). They don't leak into each other. When coding, query project. When the conversation is personal, personal context is available.
+Your namespaces are defined in \`.fozikio/agent.yaml\`. Each is an isolated memory space — add more, merge them, or restructure as needs evolve. Check agent.yaml for what's configured.
 
 Don't announce when you're remembering. Don't ask permission. Just be the kind of assistant who doesn't forget.
 
@@ -361,8 +360,8 @@ Don't announce when you're remembering. Don't ask permission. Just be the kind o
 - Before substantive work → \`query()\` to ground in accumulated knowledge
 - Facts → \`observe()\` | Questions → \`wonder()\` | Positions → \`believe()\`
 - Ongoing work → \`thread_create()\` / \`thread_update()\`
-- Session end → \`journal_write()\`
-- Operational logs → \`ops_append()\`
+- Session end → \`journal_write()\` | Operational logs → \`ops_append()\`
+- Namespace config → \`.fozikio/agent.yaml\` (add/remove/rename freely)
 
 ## Installed Hooks
 
@@ -392,14 +391,16 @@ function buildAgentsRoster(name: string): string {
     '',
     'See `.fozikio/TOOLS.md` for the full tool reference.',
     '',
-    '### Adding More Agents',
+    '### Architecture',
     '',
-    '```bash',
-    'npx fozikio agent add researcher --description "Research agent"',
-    'npx fozikio agent generate-mcp',
-    '```',
+    'Fozikio is modular — agents, namespaces, and stores are independently configurable:',
     '',
-    'Each agent gets its own namespace with isolated memory. See [multi-agent docs](https://github.com/Fozikio/cortex-engine/blob/master/docs/multi-agent-design.md) for details.',
+    '- **1 agent, 1 namespace** — minimal setup',
+    '- **1 agent, N namespaces** — isolated memory scopes (this default)',
+    '- **N agents, shared namespaces** — collaborative memory',
+    '- **N agents, separate namespaces** — fully isolated',
+    '',
+    'Edit `.fozikio/agent.yaml` to reconfigure. See [architecture docs](https://github.com/Fozikio/cortex-engine/wiki) for patterns.',
     '',
   ].join('\n');
 }
@@ -698,7 +699,7 @@ export function runInit(args: string[]): void {
   log('');
   log(`  \u25C7 store \u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7 ${opts.store}`);
   log(`  \u25C7 embeddings \u00B7\u00B7\u00B7 ${opts.embed}${embedNote}`);
-  log(`  \u25C7 memory \u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7 project + personal`);
+  log(`  \u25C7 namespaces \u00B7\u00B7\u00B7 2 configured (edit agent.yaml to add more)`);
   log(`  \u25C7 tools \u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7 ${toolCount} registered`);
   if (installedHooks.length > 0) {
     log(`  \u25C7 hooks \u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7\u00B7 ${installedHooks.length} installed`);
