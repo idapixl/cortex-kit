@@ -2,6 +2,10 @@
 
 Persistent memory for AI agents. Open source, LLM-agnostic, works with any MCP client.
 
+<p align="center">
+  <img src="demo.gif" alt="cortex-engine demo — init, explore, serve" width="800" />
+</p>
+
 ## What It Does
 
 Most AI agents forget everything when the session ends. `cortex-engine` fixes that — it gives agents a persistent memory layer that survives across sessions, models, and runtimes.
