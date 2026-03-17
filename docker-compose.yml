@@ -25,7 +25,7 @@ services:
       - cortex
 
   firestore:
-    image: google/cloud-sdk:slim
+    image: google/cloud-sdk:emulators
     command: ["gcloud", "emulators", "firestore", "start", "--host-port=0.0.0.0:8180", "--project=cortex-local"]
     ports:
       - "8180:8180"
