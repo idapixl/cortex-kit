@@ -17,8 +17,14 @@ async function getPipeline() {
 
   const log = (s: string) => process.stderr.write(s + '\n');
 
-  // Dynamic import — @huggingface/transformers is an optional peer dependency
-  const { pipeline: createPipeline } = await import('@huggingface/transformers');
+  let createPipeline;
+  try {
+    ({ pipeline: createPipeline } = await import('@huggingface/transformers'));
+  } catch {
+    throw new Error(
+      'Built-in embeddings require @huggingface/transformers. Install it: npm install @huggingface/transformers'
+    );
+  }
 
   let downloadStarted = false;
   pipeline = await createPipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {

@@ -5,7 +5,7 @@ Get a working AI memory system in 5 minutes.
 ## 1. Install
 
 ```bash
-npm install cortex-engine
+npm install @fozikio/cortex-engine
 ```
 
 ## 2. Initialize a workspace
@@ -23,7 +23,7 @@ This creates:
 ## 3. Start the MCP server
 
 ```bash
-npx cortex-engine
+npx @fozikio/cortex-engine
 ```
 
 The server runs on stdio. Your MCP client (Claude Code, Cursor, etc.) connects via `.mcp.json`.
@@ -43,7 +43,7 @@ If using Claude Code, it auto-detects `.mcp.json`. Otherwise, add this to your M
   "mcpServers": {
     "cortex": {
       "command": "npx",
-      "args": ["cortex-engine"]
+      "args": ["@fozikio/cortex-engine"]
     }
   }
 }

@@ -10,21 +10,21 @@ tags: [memory, cognition, mcp, agents, knowledge-graph, spaced-repetition, code-
 
 Persistent memory engine for AI agents. Knowledge survives across sessions — recall what you learned last week, track evolving beliefs, detect contradictions, and build a knowledge graph over time.
 
-**Source:** [github.com/Fozikio/cortex-engine](https://github.com/Fozikio/cortex-engine) (MIT) | [npm](https://www.npmjs.com/package/cortex-engine)
+**Source:** [github.com/Fozikio/cortex-engine](https://github.com/Fozikio/cortex-engine) (MIT) | [npm](https://www.npmjs.com/package/@fozikio/cortex-engine)
 
 ## Prerequisites
 
 This skill requires [cortex-engine](https://github.com/Fozikio/cortex-engine) running as an MCP server. Install it separately before using this skill:
 
 ```bash
-npm install cortex-engine@0.5.1
+npm install @fozikio/cortex-engine@0.5.1
 # Integrity: sha512-8oIL8KenrdTdACAMSM/iqyrxx04yFE/3IfHx1dTF2439ljXhSCvULcNF5V10tH8UK7P/zuwmx3RuNynvjGi4kg==
 ```
 
 Then initialize and start:
 ```bash
-npx cortex-engine@0.5.1 fozikio init my-agent
-npx cortex-engine@0.5.1  # starts MCP server
+npx @fozikio/cortex-engine@0.5.1 fozikio init my-agent
+npx @fozikio/cortex-engine@0.5.1  # starts MCP server
 ```
 
 Runs locally with SQLite + Ollama. No cloud accounts needed. The skill instructions below are read-only — they teach your agent how to use cortex tools, they don't execute anything.

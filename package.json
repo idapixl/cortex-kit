@@ -1,6 +1,6 @@
 {
-  "name": "cortex-engine",
-  "version": "0.9.1",
+  "name": "@fozikio/cortex-engine",
+  "version": "0.9.2",
   "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@fozikio/reflex": "^0.2.0",
-    "@huggingface/transformers": "^3.8.1",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "better-sqlite3": "^11.7.0",
     "yaml": "^2.7.0"
@@ -31,6 +30,7 @@
     "@google-cloud/aiplatform": "^3.12.0",
     "@google-cloud/firestore": "^7.11.0",
     "@google-cloud/vertexai": "^1.9.0",
+    "@huggingface/transformers": "^3.8.1",
     "firebase-admin": "^13.0.0",
     "openai": "^4.77.0"
   },
@@ -45,6 +45,9 @@
       "optional": true
     },
     "@google-cloud/vertexai": {
+      "optional": true
+    },
+    "@huggingface/transformers": {
       "optional": true
     },
     "firebase-admin": {

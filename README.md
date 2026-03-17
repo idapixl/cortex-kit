@@ -1,4 +1,4 @@
-# cortex-engine
+# @fozikio/cortex-engine
 
 Persistent memory for AI agents. Open source, LLM-agnostic, works with any MCP client.
 
@@ -40,7 +40,7 @@ Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs loc
 ## Quick Start
 
 ```bash
-npm install cortex-engine@0.9.0
+npm install @fozikio/cortex-engine@0.9.0
 npx fozikio init my-agent
 cd my-agent
 npx fozikio serve   # starts MCP server

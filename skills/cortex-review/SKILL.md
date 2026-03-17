@@ -12,7 +12,7 @@ This skill has been consolidated into **[cortex-engine](https://clawhub.ai/idapi
 
 Install the replacement:
 ```
-clawhub install cortex-engine
+clawhub install @fozikio/cortex-engine
 ```
 
 The new skill includes everything from cortex-review plus the full query/record workflow, pinned package versions, and source verification links.
