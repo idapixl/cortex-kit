@@ -1,4 +1,5 @@
 FROM node:20-slim AS builder
+LABEL org.opencontainers.image.source=https://github.com/Fozikio/cortex-engine
 WORKDIR /app
 
 # better-sqlite3 is a native addon — needs python and build tools to compile
