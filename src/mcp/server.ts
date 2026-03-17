@@ -35,12 +35,24 @@ import { OllamaEmbedProvider, OllamaLLMProvider } from '../providers/ollama.js';
 import type { EmbedProvider } from '../core/embed.js';
 import type { LLMProvider } from '../core/llm.js';
 import { createTools, CORE_TOOLS } from './tools.js';
-import type { ToolContext } from './tools.js';
+import type { ToolContext, ToolDefinition } from './tools.js';
 import { loadPlugins } from '../plugins/loader.js';
 
-// ─── Server Factory ───────────────────────────────────────────────────────────
+// ─── Context Factory ──────────────────────────────────────────────────────────
 
-export async function createServer(config: CortexConfig): Promise<Server> {
+/** Shared engine context — used by both MCP and REST servers. */
+export interface EngineContext {
+  ctx: ToolContext;
+  activeTools: ToolDefinition[];
+  allTools: ToolDefinition[];
+  config: CortexConfig;
+}
+
+/**
+ * Create the engine context (providers, stores, tools) without binding to any transport.
+ * Both MCP and REST servers use this to avoid duplicating setup logic.
+ */
+export async function createContext(config: CortexConfig): Promise<EngineContext> {
   // 1. Create providers based on config (async — vertex uses dynamic imports)
   const embed = await createEmbedProvider(config);
   const llm = await createLLMProvider(config);
@@ -103,7 +115,15 @@ export async function createServer(config: CortexConfig): Promise<Server> {
   }
   const activeTools = allTools.filter(t => activeToolNames.has(t.name));
 
-  // 9. Create MCP server
+  return { ctx, activeTools, allTools, config };
+}
+
+// ─── MCP Server Factory ──────────────────────────────────────────────────────
+
+export async function createServer(config: CortexConfig): Promise<Server> {
+  const { ctx, activeTools } = await createContext(config);
+
+  // Create MCP server
   const version = getPackageVersion();
   const server = new Server(
     { name: 'cortex-engine', version },

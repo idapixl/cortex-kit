@@ -131,9 +131,14 @@ export { evaluateCondition, interpolateTemplate, checkBridges } from './bridges/
 export type { BridgeContext, BridgeResult } from './bridges/bridge.js';
 
 // MCP server
-export { createServer, startServer } from './mcp/server.js';
+export { createContext, createServer, startServer } from './mcp/server.js';
+export type { EngineContext } from './mcp/server.js';
 export { createTools, CORE_TOOLS } from './mcp/tools.js';
 export type { ToolDefinition, ToolContext, ToolPlugin } from './mcp/tools.js';
+
+// REST server
+export { startRestServer } from './rest/server.js';
+export type { RestServerOptions } from './rest/server.js';
 
 // Plugins
 export { loadPlugins } from './plugins/loader.js';

@@ -26,7 +26,8 @@ import { runAnomalies } from './anomalies-cmd.js';
 import { runReport } from './report-cmd.js';
 import { runMaintain } from './maintain-cmd.js';
 import { runWander } from './wander-cmd.js';
-import { startServer } from '../mcp/server.js';
+import { createContext, startServer } from '../mcp/server.js';
+import { startRestServer } from '../rest/server.js';
 
 // ─── Help ──────────────────────────────────────────────────────────────────
 
@@ -51,7 +52,10 @@ Commands:
   help           Show this help message
 
 Serve options:
-  --agent <name>  Scope server to a named agent's namespace
+  --agent <name>     Scope server to a named agent's namespace
+  --rest             Start REST API server instead of MCP stdio
+  --port <number>    REST API port (default: 3000)
+  --token <token>    REST API auth token (or set CORTEX_API_TOKEN env var)
 
 Agent subcommands:
   agent add <name>      Register a new agent
@@ -138,6 +142,16 @@ switch (command) {
     if (agentIdx !== -1 && rest[agentIdx + 1]) {
       agentName = rest[agentIdx + 1];
     }
+    const useRest = rest.includes('--rest');
+    const portIdx = rest.indexOf('--port');
+    const restPort = portIdx !== -1 && rest[portIdx + 1]
+      ? parseInt(rest[portIdx + 1], 10)
+      : 3000;
+    const tokenIdx = rest.indexOf('--token');
+    const restToken = tokenIdx !== -1 && rest[tokenIdx + 1]
+      ? rest[tokenIdx + 1]
+      : undefined;
+
     (async () => {
       let config;
       try {
@@ -154,7 +168,15 @@ switch (command) {
         }
         process.exit(1);
       }
-      await startServer(config);
+
+      if (useRest) {
+        // REST-only mode — HTTP server, no stdio MCP
+        const engine = await createContext(config);
+        await startRestServer(engine, { port: restPort, token: restToken });
+      } else {
+        // Default: MCP stdio server
+        await startServer(config);
+      }
     })().catch(err => {
       console.error('[fozikio] Fatal:', err instanceof Error ? err.message : err);
       process.exit(1);

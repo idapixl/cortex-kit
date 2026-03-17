@@ -3,7 +3,7 @@
  * cortex-engine MCP server entry point.
  *
  * Searches for a config file in standard locations, merges with defaults,
- * then starts the stdio MCP server.
+ * then starts the stdio MCP server (default) or REST API server (--rest).
  *
  * Config search order:
  *   1. .fozikio/config.yaml   (agent workspace)
@@ -13,14 +13,25 @@
  */
 
 import { loadConfig } from './config-loader.js';
-import { startServer } from '../mcp/server.js';
+import { createContext, startServer } from '../mcp/server.js';
+import { startRestServer } from '../rest/server.js';
 
-// Parse --agent flag from argv
+// Parse flags from argv
 let agentName: string | undefined;
 const agentIdx = process.argv.indexOf('--agent');
 if (agentIdx !== -1 && process.argv[agentIdx + 1]) {
   agentName = process.argv[agentIdx + 1];
 }
+
+const useRest = process.argv.includes('--rest');
+const portIdx = process.argv.indexOf('--port');
+const restPort = portIdx !== -1 && process.argv[portIdx + 1]
+  ? parseInt(process.argv[portIdx + 1], 10)
+  : 3000;
+const tokenIdx = process.argv.indexOf('--token');
+const restToken = tokenIdx !== -1 && process.argv[tokenIdx + 1]
+  ? process.argv[tokenIdx + 1]
+  : undefined;
 
 let config;
 try {
@@ -38,11 +49,15 @@ try {
   process.exit(1);
 }
 
-startServer(config).catch(err => {
+const start = useRest
+  ? createContext(config).then(engine => startRestServer(engine, { port: restPort, token: restToken }))
+  : startServer(config);
+
+start.catch(err => {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('EADDRINUSE') || msg.includes('locked')) {
     console.error('');
-    console.error('  \u2717 memory store is locked');
+    console.error('  \u2717 port or store is locked');
     console.error('    another process may be running');
     console.error('');
   } else if (msg.includes('network') || msg.includes('fetch')) {
