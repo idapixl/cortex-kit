@@ -91,9 +91,9 @@ jobs:
       - name: Notify dependabot PR
         env:
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           PR_NUM="${{ github.event.pull_request.number }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
 
           curl -s \
             -H "Authorization: Bearer $NTFY_TOKEN" \
