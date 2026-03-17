@@ -1,5 +1,10 @@
 node_modules/
 dist/
+public/
 *.tsbuildinfo
 .env
 .env.*
+cortex.db
+demo*.gif
+demo*.yml
+terminalizer.yml

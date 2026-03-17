@@ -95,6 +95,7 @@
   },
   "files": [
     "dist",
+    "public",
     "hooks",
     "skills",
     "reflex-rules",
@@ -118,6 +119,10 @@
     "./mcp": {
       "import": "./dist/mcp/server.js",
       "types": "./dist/mcp/server.d.ts"
+    },
+    "./rest": {
+      "import": "./dist/rest/server.js",
+      "types": "./dist/rest/server.d.ts"
     }
   }
 }

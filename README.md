@@ -40,6 +40,7 @@ Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs loc
 | `bridges` | Adapters for external services and APIs |
 | `providers` | Embedding and LLM provider implementations |
 | `bin` | Entry points: `serve.js` (HTTP + MCP), `cli.js` (admin CLI) |
+| `public` | Built-in web dashboard (served automatically with `--rest`) |
 
 ## Quick Start
 
@@ -67,6 +68,25 @@ Each agent gets isolated memory via namespaces. See the **[Architecture](https:/
 ### Agent-First Setup
 
 The fastest path: open an AI agent in an empty directory and say *"set up a cortex workspace."* The agent runs `npx fozikio init`, reads the generated files, and is immediately productive. See the **[Installation](https://github.com/Fozikio/cortex-engine/wiki/Installation)** wiki page for the full guide.
+
+### Dashboard
+
+cortex-engine ships with a built-in web dashboard. Start the REST server and open the URL in your browser:
+
+```bash
+npx fozikio serve --rest --port 3000
+# open http://localhost:3000
+```
+
+The dashboard shows your agent's stats, threads, ops log, memories, concepts, and observations — no separate install required. It auto-detects its API from the same origin it's served from.
+
+If auth is enabled (`CORTEX_API_TOKEN`), the dashboard loads without auth but API calls require a token. Set it via localStorage:
+
+```js
+localStorage.setItem("cortex-settings", JSON.stringify({ token: "your-token" }));
+```
+
+Source: [fozikio-dashboard](https://github.com/Fozikio/Dashboard)
 
 ### CLI
 
