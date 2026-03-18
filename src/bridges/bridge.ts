@@ -32,7 +32,7 @@ export interface BridgeResult {
  */
 export function evaluateCondition(condition: string, data: Record<string, unknown>): boolean {
   // Parse: field operator value
-  const match = condition.match(/^\s*(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+?)$/);
+  const match = condition.trim().match(/^(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)$/);
   if (!match) return false;
 
   const [, field, op, rawValue] = match;

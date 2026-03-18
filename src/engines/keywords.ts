@@ -41,7 +41,7 @@ export function extractKeywords(text: string, max: number = 20): string[] {
         .toLowerCase()
         .replace(/[^a-z0-9\s'-]/g, ' ')
         .split(/\s+/)
-        .map(w => w.replace(/^['-]+/, '').replace(/['-]+$/, ''))
+        .map(w => { let s = 0, e = w.length; while (s < e && (w[s]==="'"||w[s]==="-")) s++; while (e > s && (w[e-1]==="'"||w[e-1]==="-")) e--; return w.slice(s, e); })
         .filter(w => w.length >= 3 && !STOP_WORDS.has(w) && !/^\d+$/.test(w))
     ),
   ].slice(0, max);
