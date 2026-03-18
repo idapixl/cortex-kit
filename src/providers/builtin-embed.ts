@@ -19,6 +19,7 @@ async function getPipeline() {
 
   let createPipeline;
   try {
+    // @ts-expect-error — optional peer dependency, dynamically loaded
     ({ pipeline: createPipeline } = await import('@huggingface/transformers'));
   } catch {
     throw new Error(
