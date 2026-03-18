@@ -536,9 +536,7 @@ export async function startRestServer(
       if (message.includes('not available')) {
         errorJson(res, message, 404);
       } else {
-        // Log full error server-side but return generic message to client
-        // to avoid leaking internal details (stack traces, file paths, etc.)
-        process.stderr.write(`[cortex] Internal error: ${message}\n`);
+        process.stderr.write(`[rest] unhandled error: ${err instanceof Error ? err.stack ?? message : message}\n`);
         errorJson(res, 'Internal server error', 500);
       }
     }

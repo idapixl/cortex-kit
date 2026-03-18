@@ -1,11 +1,11 @@
 /**
- * BuiltInEmbedProvider — zero-dependency local embeddings using @huggingface/transformers.
+ * BuiltInEmbedProvider — local embeddings using @huggingface/transformers (optional peer dependency).
  *
  * Uses all-MiniLM-L6-v2 (23MB, 384 dimensions) by default.
  * No Ollama, no API keys, no external services needed.
  * Model is downloaded on first use and cached locally.
  *
- * This is the default embed provider — works immediately after npm install.
+ * Requires: `npm install @huggingface/transformers`
  */
 
 import type { EmbedProvider } from '../core/embed.js';
@@ -19,6 +19,7 @@ async function getPipeline() {
 
   let createPipeline;
   try {
+    // @ts-ignore — optional peer dependency, may or may not be installed
     ({ pipeline: createPipeline } = await import('@huggingface/transformers'));
   } catch {
     throw new Error(

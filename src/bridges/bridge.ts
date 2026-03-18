@@ -31,11 +31,16 @@ export interface BridgeResult {
  *   "dimension == \"beliefs\""
  */
 export function evaluateCondition(condition: string, data: Record<string, unknown>): boolean {
-  // Parse: field operator value
-  const match = condition.match(/^\s*(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)\s*$/);
-  if (!match) return false;
-
-  const [, field, op, rawValue] = match;
+  // Parse: field operator value (no regex on uncontrolled input to avoid ReDoS)
+  const s = condition.trim();
+  const fieldMatch = s.match(/^(\w+)/);
+  if (!fieldMatch) return false;
+  const field = fieldMatch[1];
+  let rest = s.slice(field.length).trimStart();
+  const opMatch = rest.match(/^(==|!=|>=|<=|>|<)/);
+  if (!opMatch) return false;
+  const op = opMatch[1];
+  const rawValue = rest.slice(op.length).trimStart();
   const actual = data[field];
   if (actual === undefined) return false;
 
