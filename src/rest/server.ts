@@ -534,7 +534,9 @@ export async function startRestServer(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes('not available')) {
-        errorJson(res, message, 404);
+        // Log detailed error information on the server, but return a generic message to the client.
+        process.stderr.write(`[rest] not available error: ${err instanceof Error ? err.stack ?? message : message}\n`);
+        errorJson(res, 'Resource not available', 404);
       } else {
         process.stderr.write(`[rest] unhandled error: ${err instanceof Error ? err.stack ?? message : message}\n`);
         errorJson(res, 'Internal server error', 500);
