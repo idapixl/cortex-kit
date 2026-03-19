@@ -1,5 +1,10 @@
 # @fozikio/cortex-engine
 
+[![npm version](https://img.shields.io/npm/v/@fozikio/cortex-engine)](https://www.npmjs.com/package/@fozikio/cortex-engine)
+[![npm downloads](https://img.shields.io/npm/dw/@fozikio/cortex-engine)](https://www.npmjs.com/package/@fozikio/cortex-engine)
+[![GitHub stars](https://img.shields.io/github/stars/Fozikio/cortex-engine)](https://github.com/Fozikio/cortex-engine/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Persistent memory for AI agents. Open source, LLM-agnostic, works with any MCP client.
 
 <p align="center">
@@ -45,7 +50,7 @@ Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs loc
 ## Quick Start
 
 ```bash
-npm install @fozikio/cortex-engine@0.9.0
+npm install @fozikio/cortex-engine
 npx fozikio init my-agent
 cd my-agent
 npx fozikio serve   # starts MCP server
@@ -183,12 +188,18 @@ Install any plugin: `npm install @fozikio/tools-threads` — cortex-engine auto-
 - **[Project Board](https://github.com/orgs/Fozikio/projects/2)** — Roadmap and active work
 - **[Security](https://github.com/Fozikio/.github/blob/main/SECURITY.md)** — Report vulnerabilities
 
+## Community
+
+- [r/Fozikio](https://www.reddit.com/r/Fozikio/) — Project subreddit
+- [GitHub Discussions](https://github.com/Fozikio/cortex-engine/discussions) — Questions, feedback, show what you've built
+- ["I built 44 MCP tools for my cognitive system"](https://reddit.com/r/mcp/comments/1rno9pu/) — r/mcp deep dive (84 upvotes, 27 comments)
+- ["Gave my agent a subconscious"](https://reddit.com/r/clawdbot/comments/1rtvex3/) — r/clawdbot walkthrough (22 upvotes, 34 comments)
+
 ## Related Projects
 
 - [@fozikio/reflex](https://github.com/Fozikio/reflex) — Portable safety guardrails for agents. Rules as data, not code.
 - [sigil](https://github.com/Fozikio/sigil) — Agent control surface. Signals and gestures, not conversations.
 - [fozikio.com](https://www.fozikio.com) — Documentation and guides
-- [r/fozikio](https://www.reddit.com/r/Fozikio/) — Community
 
 ## License
 
