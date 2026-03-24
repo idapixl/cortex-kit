@@ -1,6 +1,6 @@
 {
   "name": "@fozikio/cortex-engine",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
