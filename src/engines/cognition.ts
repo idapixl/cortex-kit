@@ -86,6 +86,19 @@ export interface DreamOptions {
    * If true, skip PE saturation detection.
    */
   skip_pe_saturation?: boolean;
+  /**
+   * Dream strategy:
+   * - 'sequential' (default): many small LLM calls, each with a local view.
+   * - 'long-context': one large LLM call per phase with the full memory graph visible.
+   *   Requires a model with a large context window (e.g. kimi, gemini).
+   *   Produces better edge discovery and abstractions on larger memory graphs.
+   */
+  strategy?: 'sequential' | 'long-context';
+  /**
+   * Max memories to include in a single long-context pass (default: 200).
+   * Reduce if hitting token limits with a smaller model.
+   */
+  long_context_memory_limit?: number;
 }
 
 // ─── Phase result types ───────────────────────────────────────────────────────
@@ -513,6 +526,134 @@ async function discoverEdges(
   return { edges_discovered };
 }
 
+// ─── Phase 4 (long-context): Connect ──────────────────────────────────────────
+
+interface LongContextEdge {
+  source_id: string;
+  target_id: string;
+  relation: EdgeRelation;
+  evidence: string;
+}
+
+/**
+ * Long-context variant of discoverEdges.
+ *
+ * Instead of N² pairwise calls (each seeing only 2 memories), makes a single
+ * LLM call with the full memory graph visible. The model can find transitive
+ * patterns, cross-domain contradictions, and causal chains that the pairwise
+ * approach structurally cannot detect.
+ *
+ * Works best with large-context models (kimi-k2, gemini-2.5-pro, etc.).
+ * Cap via options.long_context_memory_limit if needed (default: 200).
+ */
+async function discoverEdgesLongContext(
+  store: CortexStore,
+  llm: LLMProvider,
+  options: DreamOptions,
+): Promise<ConnectPhaseResult> {
+  const memoryLimit = options.long_context_memory_limit ?? 200;
+  let edges_discovered = 0;
+
+  let recentMemories: Memory[];
+  try {
+    recentMemories = await store.getRecentMemories(30, memoryLimit);
+  } catch {
+    return { edges_discovered: 0 };
+  }
+
+  if (recentMemories.length < 2) return { edges_discovered: 0 };
+
+  const memoryIds = recentMemories.map((m) => m.id);
+  const memoryMap = new Map(recentMemories.map((m) => [m.id, m]));
+
+  // Fetch all edges between these memories so the model sees the current graph.
+  let existingEdgeSet = new Set<string>();
+  let existingEdgeLines = 'None.';
+  try {
+    const existingEdges = await store.getEdgesForMemories(memoryIds);
+    existingEdgeSet = new Set(
+      existingEdges.flatMap((e) => [
+        `${e.source_id}:${e.target_id}`,
+        `${e.target_id}:${e.source_id}`,
+      ]),
+    );
+    if (existingEdges.length > 0) {
+      existingEdgeLines = existingEdges
+        .map((e) => `  ${e.source_id} --[${e.relation}]--> ${e.target_id}: ${e.evidence}`)
+        .join('\n');
+    }
+  } catch {
+    // Proceed without existing edge context — model may suggest duplicates,
+    // but we validate before writing so it's safe.
+  }
+
+  const validRelations: EdgeRelation[] = [
+    'extends', 'refines', 'contradicts', 'tensions-with',
+    'questions', 'supports', 'exemplifies', 'caused', 'related',
+  ];
+
+  const memoryLines = recentMemories
+    .map((m) => `[${m.id}] (${m.category}) ${m.name}: ${m.definition}`)
+    .join('\n');
+
+  const prompt =
+    `You are analysing the memory graph of a cognitive AI agent.\n\n` +
+    `MEMORY NODES (${recentMemories.length}):\n${memoryLines}\n\n` +
+    `EXISTING EDGES:\n${existingEdgeLines}\n\n` +
+    `TASK: Identify all meaningful relationships that are MISSING from this graph.\n` +
+    `Look especially for:\n` +
+    `- Transitive patterns (A extends B, B contradicts C → does A tension-with C?)\n` +
+    `- Cross-domain connections between different categories\n` +
+    `- Causal chains and supporting evidence relationships\n` +
+    `- Contradictions or tensions not yet captured\n\n` +
+    `RULES:\n` +
+    `- Use exact IDs from the memory nodes above\n` +
+    `- Do not suggest edges that already exist\n` +
+    `- Only suggest edges where a real semantic relationship exists\n` +
+    `- Valid relation types: ${validRelations.join(', ')}\n\n` +
+    `Respond with a JSON array. Each element: ` +
+    `{"source_id": "...", "target_id": "...", "relation": "...", "evidence": "one sentence"}\n` +
+    `If no new edges are needed, respond with: []`;
+
+  let discovered: LongContextEdge[];
+  try {
+    discovered = await llm.generateJSON<LongContextEdge[]>(prompt, { temperature: 0.2 });
+    if (!Array.isArray(discovered)) return { edges_discovered: 0 };
+  } catch {
+    return { edges_discovered: 0 };
+  }
+
+  for (const edge of discovered) {
+    try {
+      if (!memoryMap.has(edge.source_id) || !memoryMap.has(edge.target_id)) continue;
+      if (edge.source_id === edge.target_id) continue;
+      if (!validRelations.includes(edge.relation)) continue;
+
+      const key = `${edge.source_id}:${edge.target_id}`;
+      if (existingEdgeSet.has(key)) continue;
+
+      await store.putEdge({
+        source_id: edge.source_id,
+        target_id: edge.target_id,
+        relation: edge.relation,
+        weight: 0.7,
+        evidence: edge.evidence ?? '',
+        created_at: new Date(),
+      });
+
+      // Mark both directions to prevent duplicates within this batch.
+      existingEdgeSet.add(key);
+      existingEdgeSet.add(`${edge.target_id}:${edge.source_id}`);
+
+      edges_discovered++;
+    } catch {
+      continue;
+    }
+  }
+
+  return { edges_discovered };
+}
+
 // ─── Phase 5: Score ───────────────────────────────────────────────────────────
 
 /**
@@ -857,7 +998,9 @@ export async function dreamPhaseB(
   fiedler_value: number | undefined;
   pe_saturation: PESaturationResult | undefined;
 }> {
-  const connectResult = await discoverEdges(store, llm, options);
+  const connectResult = options.strategy === 'long-context'
+    ? await discoverEdgesLongContext(store, llm, options)
+    : await discoverEdges(store, llm, options);
   const scoreResult = await scoreMemories(store, options);
   const abstractResult = await abstractCrossDomain(store, embed, llm, options);
 
@@ -937,7 +1080,9 @@ export async function dreamConsolidate(
   );
 
   // Phase 4 — Connect
-  const connectResult = await discoverEdges(store, llm, options);
+  const connectResult = options.strategy === 'long-context'
+    ? await discoverEdgesLongContext(store, llm, options)
+    : await discoverEdges(store, llm, options);
 
   // Phase 5 — Score
   const scoreResult = await scoreMemories(store, options);
