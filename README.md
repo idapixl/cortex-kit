@@ -43,6 +43,16 @@ The result: personality and expertise emerge from accumulated experience, not sy
 
 Works with Claude Code, Cursor, Windsurf, or any MCP-compatible client. Runs locally (SQLite) or in the cloud (Firestore + Cloud Run).
 
+## Security
+
+The engine includes defense-in-depth protections for deployed environments:
+
+- **Timing-safe auth** — REST server authentication uses `crypto.timingSafeEqual` to prevent timing side-channel attacks
+- **Plugin sandboxing** — the plugin loader validates import paths against trusted directories, blocking loads from untrusted locations
+- **REST tool blocklist** — destructive tools (`forget`, `dream`, `evolve`, `resolve`, `thread_resolve`) are blocked from the generic REST endpoint; they remain available via MCP for direct agent access
+- **SQLite injection prevention** — namespace names are validated (alphanumeric only), LIMIT clauses are parameterized
+- **Secret leak prevention** — config loader warns when API keys appear in config files instead of environment variables
+
 ## Architecture
 
 | Module | Role |
