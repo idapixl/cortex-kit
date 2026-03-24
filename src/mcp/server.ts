@@ -337,6 +337,15 @@ async function createLLMProvider(config: CortexConfig): Promise<LLMProvider> {
         providerName: config.llm,
       });
     }
+    case 'kimi': {
+      const { OpenAICompatibleLLMProvider } = await import('../providers/openai-compatible.js');
+      return new OpenAICompatibleLLMProvider({
+        model: config.llm_options?.kimi_model ?? 'kimi-k2-0711-preview',
+        baseUrl: 'https://api.moonshot.cn/v1',
+        apiKey: config.llm_options?.kimi_api_key ?? process.env['MOONSHOT_API_KEY'],
+        providerName: 'kimi',
+      });
+    }
     default:
       throw new Error(`LLM provider "${config.llm}" not yet implemented in this build`);
   }

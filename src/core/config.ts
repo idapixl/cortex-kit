@@ -69,8 +69,8 @@ export interface CortexConfig {
   /** Embedding provider: 'built-in' (default, no setup) | 'ollama' | 'vertex' | 'openai' */
   embed: 'built-in' | 'ollama' | 'vertex' | 'openai';
 
-  /** LLM provider: 'ollama' | 'gemini' | 'anthropic' | 'openai' */
-  llm: 'ollama' | 'gemini' | 'anthropic' | 'openai';
+  /** LLM provider: 'ollama' | 'gemini' | 'anthropic' | 'openai' | 'kimi' */
+  llm: 'ollama' | 'gemini' | 'anthropic' | 'openai' | 'kimi';
 
   /** Named cognitive namespaces. */
   namespaces: Record<string, NamespaceConfig>;
@@ -141,6 +141,10 @@ export interface CortexConfig {
     openai_base_url?: string;
     /** OpenAI-compatible: API key (auto-detected from env vars if omitted) */
     openai_api_key?: string;
+    /** Kimi (Moonshot AI): model name (default: kimi-k2-0711-preview) */
+    kimi_model?: string;
+    /** Kimi (Moonshot AI): API key (default: MOONSHOT_API_KEY env var) */
+    kimi_api_key?: string;
   };
 }
 
