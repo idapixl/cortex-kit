@@ -58,6 +58,14 @@ export const threadCreateTool: ToolDefinition = {
 
     const id = await store.put(COLLECTION, doc);
 
-    return { id, title, body, kind, project, status: 'open', priority };
+    const result: Record<string, unknown> = { id, title, body, kind, project, status: 'open', priority };
+
+    // Gate: warn if next_step or project is missing — threads without these tend to become stale
+    const warnings: string[] = [];
+    if (!nextStep) warnings.push('Missing next_step — threads without a concrete next action tend to go stale. Consider using observe() or wonder() instead if this is speculative.');
+    if (!project) warnings.push('Missing project — unscoped threads are harder to find and maintain.');
+    if (warnings.length > 0) result['warnings'] = warnings;
+
+    return result;
   },
 };

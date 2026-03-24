@@ -35,15 +35,24 @@ export const opsQueryTool: ToolDefinition = {
     return {
       namespace: namespace ?? ctx.namespaces.getDefaultNamespace(),
       count: entries.length,
-      entries: entries.map(e => ({
-        id: e.id,
-        content: e.content,
-        type: e.type,
-        status: e.status,
-        project: e.project,
-        keywords: e.keywords,
-        created_at: e.created_at,
-      })),
+      entries: entries.map(e => {
+        const result: Record<string, unknown> = {
+          id: e.id,
+          content: e.content,
+          type: e.type,
+          status: e.status,
+          project: e.project,
+          keywords: e.keywords,
+          created_at: e.created_at,
+        };
+        if (e.session_type) result.session_type = e.session_type;
+        if (e.seed_type) result.seed_type = e.seed_type;
+        if (e.next) result.next = e.next;
+        if (e.blocked) result.blocked = e.blocked;
+        if (e.type === 'instruction' && e.instruction_meta) result.instruction_meta = e.instruction_meta;
+        if (e.type === 'handoff' && e.handoff_meta) result.handoff_meta = e.handoff_meta;
+        return result;
+      }),
     };
   },
 };
