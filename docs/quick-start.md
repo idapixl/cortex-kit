@@ -71,10 +71,13 @@ Edit `.fozikio/agent.yaml` to change:
 |---------|---------|---------|
 | Storage | `sqlite`, `firestore` | `sqlite` |
 | Embeddings | `built-in`, `ollama`, `vertex`, `openai` | `built-in` |
-| LLM | `ollama`, `gemini`, `anthropic`, `openai` | `ollama` |
+| LLM | `ollama`, `gemini`, `anthropic`, `openai`, `kimi` | `ollama` |
 
 ```bash
 npx fozikio config --store sqlite --embed ollama --llm ollama
+
+# Use Kimi (Moonshot AI) — set MOONSHOT_API_KEY in your environment
+npx fozikio config --llm kimi
 ```
 
 ## Local defaults
@@ -87,6 +90,19 @@ To use Ollama instead, install it from [ollama.com](https://ollama.com), pull an
 ollama pull nomic-embed-text
 npx fozikio config --embed ollama
 ```
+
+## Long-context dream consolidation
+
+If you're using a large-context model (Kimi, Gemini 2.5 Pro), enable the long-context dream strategy for significantly better edge discovery and abstraction:
+
+```yaml
+# .fozikio/agent.yaml
+llm: kimi
+llm_options:
+  kimi_model: kimi-k2-0711-preview
+```
+
+Then pass `strategy: long-context` when calling `dream()`, or set it in your agent config. Instead of N² pairwise LLM calls (capped at 15 memories), the engine makes a single call with the full memory graph visible — the model can find transitive patterns and cross-domain connections that the sequential approach misses.
 
 ## Next steps
 

@@ -34,7 +34,8 @@ Most AI agents forget everything when the session ends. `cortex-engine` fixes th
 - **Graph health metrics** — Fiedler value (algebraic connectivity) measures knowledge integration; PE saturation detection prevents identity model ossification
 - **Spaced repetition (FSRS)** — interval-aware scheduling with consolidation-state-dependent decay profiles
 - **Embeddings** — pluggable providers (built-in, OpenAI, Vertex AI, Ollama) — no external service required by default
-- **LLM-agnostic** — pluggable LLM providers: Ollama (free/local), Gemini, DeepSeek, Hugging Face, OpenRouter, OpenAI, or any OpenAI-compatible API
+- **LLM-agnostic** — pluggable LLM providers: Ollama (free/local), Gemini, Kimi (Moonshot AI), DeepSeek, Hugging Face, OpenRouter, OpenAI, or any OpenAI-compatible API
+- **Long-context dream consolidation** — set `strategy: long-context` to run edge discovery and abstraction in a single large LLM pass instead of N² pairwise calls; surfaces transitive patterns and cross-domain connections that the sequential approach misses
 - **Agent dispatch** — `agent_invoke` lets your agent spawn cheap, cortex-aware sub-tasks using any configured LLM. Knowledge compounds across sessions.
 - **MCP server** — 57 cognitive tools (`query`, `observe`, `believe`, `wander`, `dream`, `goal_set`, `agent_invoke`, `thread_create`, `journal_write`, `evolve`, etc.) over the Model Context Protocol
 
@@ -129,8 +130,10 @@ npm run test:watch
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CORTEX_API_TOKEN` | Optional | Used by the `cortex-telemetry` hook to send retrieval feedback to the cortex API. Not required to run the MCP server. |
+| `MOONSHOT_API_KEY` | Optional | Required when `llm: kimi` is set. Get one from [platform.moonshot.cn](https://platform.moonshot.cn). |
+| `OPENAI_API_KEY` | Optional | Required when `llm: openai` is set, or when using any OpenAI-compatible provider without an explicit API key. |
 
-Additional variables are required depending on which providers you enable (Firestore, Vertex AI, OpenAI, etc.). See `docs/` for provider-specific configuration.
+Additional variables are required depending on which providers you enable (Firestore, Vertex AI, etc.). See `docs/` for provider-specific configuration.
 
 ## Rules, Skills & Agents
 
