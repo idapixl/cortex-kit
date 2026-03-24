@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Kimi (Moonshot AI) provider** — `llm: kimi` is now a first-class config option. Set `MOONSHOT_API_KEY` and the engine auto-configures against `api.moonshot.cn/v1`. Optionally override the model via `llm_options.kimi_model` (default: `kimi-k2-0711-preview`).
+- **Long-context dream strategy** — `DreamOptions.strategy: 'long-context'` replaces the Phase 4 (Connect) N² pairwise edge discovery with a single LLM call that sees the full memory graph (up to 200 nodes + all existing edges). The model finds transitive patterns, cross-domain contradictions, and causal chains that the sequential approach structurally cannot detect. Works with any large-context model; `long_context_memory_limit` controls the cap (default: 200).
+
+---
+
 ## [1.0.0] — 2026-03-23
 
 ### Major Release — Plugin Absorption

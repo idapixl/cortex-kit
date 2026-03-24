@@ -1,7 +1,7 @@
 /**
  * OpenAICompatibleLLMProvider — works with any OpenAI-compatible API.
  *
- * Covers: OpenAI, DeepSeek, Hugging Face Inference, OpenRouter,
+ * Covers: OpenAI, DeepSeek, Kimi (Moonshot AI), Hugging Face Inference, OpenRouter,
  * Together AI, Fireworks, LM Studio, vLLM, and any other service
  * that implements the /v1/chat/completions endpoint.
  *
@@ -49,6 +49,7 @@ const KNOWN_PROVIDERS: Record<string, { baseUrl: string; envKey: string }> = {
   openrouter:   { baseUrl: 'https://openrouter.ai/api/v1',      envKey: 'OPENROUTER_API_KEY' },
   together:     { baseUrl: 'https://api.together.xyz/v1',        envKey: 'TOGETHER_API_KEY' },
   fireworks:    { baseUrl: 'https://api.fireworks.ai/inference/v1', envKey: 'FIREWORKS_API_KEY' },
+  kimi:         { baseUrl: 'https://api.moonshot.cn/v1',        envKey: 'MOONSHOT_API_KEY' },
 };
 
 /** Detect which API key is available and return the appropriate config. */
