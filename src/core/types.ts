@@ -117,6 +117,30 @@ export interface Observation {
 
 export type OpsEntryType = 'log' | 'instruction' | 'handoff' | 'milestone' | 'decision';
 export type OpsStatus = 'active' | 'done' | 'stale';
+export type OpsSessionType = 'interactive' | 'cron';
+
+/** TTL per entry type (days). Governs Firestore auto-expiry. */
+export const OPS_TTL_DAYS: Record<OpsEntryType, number> = {
+  log: 90,
+  instruction: 14,
+  handoff: 14,
+  milestone: 180,
+  decision: 365,
+};
+
+export interface OpsInstructionMeta {
+  model?: string;
+  skip?: string[];
+  target_project?: string;
+}
+
+export interface OpsHandoffMeta {
+  completed: string[];
+  in_flight: string[];
+  next_actions: string[];
+  decisions_made: string[];
+  open_threads: string[];
+}
 
 export interface OpsEntry {
   id: string;
@@ -130,6 +154,18 @@ export interface OpsEntry {
   updated_at: Date;
   expires_at: Date;
   provenance?: ModelProvenance;
+  /** Session origin — interactive (human present) or cron (autonomous). */
+  session_type?: OpsSessionType;
+  /** Cron seed name (ops-health, trading, creative, etc.). */
+  seed_type?: string;
+  /** What is blocking progress on this entry. */
+  blocked?: string;
+  /** What should happen next. */
+  next?: string;
+  /** Structured metadata for instruction-type entries. */
+  instruction_meta?: OpsInstructionMeta;
+  /** Structured metadata for handoff-type entries. */
+  handoff_meta?: OpsHandoffMeta;
 }
 
 export interface OpsFilters {
