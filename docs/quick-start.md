@@ -51,7 +51,7 @@ If using Claude Code, it auto-detects `.mcp.json`. Otherwise, add this to your M
 
 ## 5. Use it
 
-Your agent now has 17 cognitive tools. The basics:
+Your agent now has 57 cognitive tools. The basics:
 
 ```
 query("what do I know about authentication?")   # search memories
@@ -90,6 +90,6 @@ npx fozikio config --embed ollama
 
 ## Next steps
 
-- Add plugins: `npm install @fozikio/tools-threads` (thread management)
+- Build custom plugins: see [Plugin Authoring](https://github.com/Fozikio/cortex-engine/wiki/Plugin-Authoring) — all Fozikio tools are built-in as of v1.0.0
 - Run `dream()` periodically to consolidate observations into memories
 - Use `ops_append()` for session tracking across conversations
