@@ -1,7 +1,7 @@
 {
   "name": "@fozikio/cortex-engine",
   "version": "1.1.0",
-  "description": "Portable cognitive engine for AI agents — storage, embeddings, memory, FSRS, and MCP server",
+  "description": "Portable cognitive engine for AI agents \u00e2\u20ac\u201d storage, embeddings, memory, FSRS, and MCP server",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@fozikio/reflex": "^0.2.0",
-    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^11.7.0",
     "yaml": "^2.7.0"
   },
@@ -124,5 +124,9 @@
       "import": "./dist/rest/server.js",
       "types": "./dist/rest/server.d.ts"
     }
+  },
+  "overrides": {
+    "node-forge": ">=1.4.0",
+    "path-to-regexp": ">=8.4.0"
   }
 }
