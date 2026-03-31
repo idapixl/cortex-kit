@@ -119,7 +119,7 @@ export async function runReport(args: string[]): Promise<void> {
       docs => docs as unknown as Observation[],
     ),
     store.queryOps({ days, limit: 5000 }),
-    store.query('threads_v2', [], { limit: 2000 }).then(
+    store.query('threads', [], { limit: 2000 }).then(
       docs => docs as unknown as Array<{ status?: string; resolved_at?: Date | string | null }>,
     ),
   ]);

@@ -198,7 +198,7 @@ async function gatherContext(store: CortexStore, depth: number): Promise<string>
   // 1. Open threads
   try {
     const threads = await store.query(
-      'threads_v2',
+      'threads',
       [{ field: 'status', op: 'in', value: ['open', 'active'] }],
       { limit: 5, orderBy: 'priority', orderDir: 'desc' },
     );
@@ -211,7 +211,7 @@ async function gatherContext(store: CortexStore, depth: number): Promise<string>
       }
     }
   } catch {
-    // threads_v2 collection may not exist — non-fatal
+    // threads collection may not exist — non-fatal
   }
 
   // 2. Recent observations (including questions and speculations)

@@ -4,7 +4,7 @@
 
 import type { ToolDefinition, ToolContext } from '../mcp/tools.js';
 
-const COLLECTION = 'content_v2';
+const COLLECTION = 'content';
 
 export const contentUpdateTool: ToolDefinition = {
   name: 'content_update',

@@ -5,7 +5,7 @@
 import type { ToolDefinition, ToolContext } from '../mcp/tools.js';
 import type { QueryFilter } from '../core/types.js';
 
-const COLLECTION = 'content_v2';
+const COLLECTION = 'content';
 
 export const contentListTool: ToolDefinition = {
   name: 'content_list',

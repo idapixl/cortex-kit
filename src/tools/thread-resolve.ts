@@ -4,7 +4,7 @@
 
 import type { ToolDefinition, ToolContext } from '../mcp/tools.js';
 
-const COLLECTION = 'threads_v2';
+const COLLECTION = 'threads';
 
 export const threadResolveTool: ToolDefinition = {
   name: 'thread_resolve',

@@ -5,7 +5,7 @@
 import type { ToolDefinition, ToolContext } from '../mcp/tools.js';
 import type { QueryFilter } from '../core/types.js';
 
-const COLLECTION = 'threads_v2';
+const COLLECTION = 'threads';
 
 export const threadsListTool: ToolDefinition = {
   name: 'threads_list',

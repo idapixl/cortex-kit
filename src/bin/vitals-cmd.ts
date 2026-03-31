@@ -506,7 +506,7 @@ export async function runVitals(args: string[]): Promise<void> {
       store.query('retrieval_traces', [{ field: 'timestamp', op: '>=', value: windowStart }], { limit: 1000, orderBy: 'timestamp', orderDir: 'desc' }),
       store.query('observations', [cutoffFilter], { limit: 500 }),
       store.query('edges', [cutoffFilter], { limit: 1000 }),
-      store.query('threads_v2', [{ field: 'updated_at', op: '>=', value: windowStart }]),
+      store.query('threads', [{ field: 'updated_at', op: '>=', value: windowStart }]),
       store.query('vitals', []),
     ]);
 
