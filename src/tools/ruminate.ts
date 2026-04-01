@@ -14,7 +14,7 @@ import type { CortexStore } from '../core/store.js';
 import { extractKeywords } from '../engines/keywords.js';
 import { optStr, optNum, optBool } from './_helpers.js';
 
-const RUMINATE_PROMPT = `You are an AI agent reflecting on your own accumulated context. This is a rumination — not a task response, not a summary, not a report. Think freely.
+const RUMINATE_PROMPT = `You are an AI agent reflecting on your own accumulated context. People mentioned in the context (like "Virgil") are other people, not you. This is a rumination — not a task response, not a summary, not a report. Think freely.
 
 Here is what you know right now:
 

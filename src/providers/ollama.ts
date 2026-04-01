@@ -16,6 +16,11 @@ import type { LLMProvider, GenerateOptions, GenerateJSONOptions } from '../core/
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+/** Strip <think>...</think> blocks from model output (qwen3, phi4-reasoning). */
+function stripThinking(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+}
+
 async function ollamaPost<T>(
   baseUrl: string,
   path: string,
@@ -107,7 +112,7 @@ export class OllamaLLMProvider implements LLMProvider {
     model?: string;
     baseUrl?: string;
   }) {
-    this.modelId = options?.model ?? 'qwen2.5:14b';
+    this.modelId = options?.model ?? 'qwen3:14b';
     this.baseUrl = options?.baseUrl ?? 'http://localhost:11434';
   }
 
@@ -132,7 +137,7 @@ export class OllamaLLMProvider implements LLMProvider {
       body,
     );
 
-    return data.response;
+    return stripThinking(data.response);
   }
 
   async generateJSON<T>(prompt: string, options?: GenerateJSONOptions): Promise<T> {
@@ -165,7 +170,7 @@ export class OllamaLLMProvider implements LLMProvider {
     );
 
     try {
-      return JSON.parse(data.response) as T;
+      return JSON.parse(stripThinking(data.response)) as T;
     } catch (cause) {
       throw new Error(
         `OllamaLLMProvider.generateJSON: failed to parse JSON response.\nRaw response: ${data.response}`,

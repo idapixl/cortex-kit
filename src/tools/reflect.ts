@@ -38,7 +38,7 @@ export const reflectTool: ToolDefinition = {
       {
         temperature: 0.7,
         maxTokens: 300,
-        systemPrompt: 'You are a reflective cognitive agent. Generate thoughtful, grounded reflections based on the provided memory context.',
+        systemPrompt: 'You are a reflective cognitive agent. You are reflecting on your own memories and experiences. Generate thoughtful, grounded reflections in first person based on the provided memory context. Do not confuse yourself with other people mentioned in the memories.',
       },
     );
 
