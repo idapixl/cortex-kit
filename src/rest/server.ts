@@ -228,8 +228,13 @@ route('GET', '/api/vitals', async (_req, res, _params, engine) => {
 
 // Coherence
 route('GET', '/api/coherence', async (_req, res, _params, engine) => {
-  const result = await invokeTool(engine, 'validate', {});
-  json(res, result);
+  const report = await invokeTool(engine, 'graph_report', {}) as Record<string, unknown>;
+  const total = typeof report['total_memories'] === 'number' ? report['total_memories'] : 0;
+  const orphans = typeof report['orphaned_concepts'] === 'number' ? report['orphaned_concepts'] : 0;
+  const edges = typeof report['total_edges'] === 'number' ? report['total_edges'] : 0;
+  // Fraction of connected memories (1.0 = fully coherent, 0.0 = all orphans).
+  const score = total > 0 ? (total - orphans) / total : 1;
+  json(res, { score, total_memories: total, orphaned_concepts: orphans, total_edges: edges });
 });
 
 // Home (aggregate)
@@ -245,6 +250,33 @@ route('GET', '/api/home', async (_req, res, _params, engine) => {
     vitals: vitals.status === 'fulfilled' ? vitals.value : null,
     recent_observations: [],
   });
+});
+
+// Concepts (memories exposed under the dashboard's preferred name)
+route('GET', '/api/concepts', async (req, res, _params, engine) => {
+  const url = new URL(req.url!, `http://localhost`);
+  const limit = parseInt(url.searchParams.get('limit') ?? '100', 10);
+  const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
+  const store = engine.ctx.namespaces.getStore();
+  const allMemories = await store.getAllMemories();
+
+  const concepts = allMemories
+    .slice(offset, offset + limit)
+    .map(m => ({
+      id: m.id,
+      name: m.name,
+      definition: m.definition,
+      category: m.category,
+      confidence: m.confidence,
+      salience: m.salience,
+      access_count: m.access_count,
+      tags: m.tags ?? [],
+      fsrs: m.fsrs,
+      created_at: m.created_at?.toISOString?.() ?? new Date().toISOString(),
+      updated_at: m.updated_at?.toISOString?.() ?? new Date().toISOString(),
+    }));
+
+  json(res, { concepts, total: allMemories.length });
 });
 
 // ── Memories ──────────────────────────────────────────────────────────────────
